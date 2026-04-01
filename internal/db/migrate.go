@@ -1,7 +1,19 @@
 package db
 
-import "go-api/internal/models"
+import (
+	"go-api/internal/models"
 
-func Migrate() {
-	DB.AutoMigrate(&models.User{}, &models.Role{}, &models.Permission{})
+	"gorm.io/gorm"
+)
+
+func Migrate(db *gorm.DB) error {
+
+	err := db.AutoMigrate(models.MigrateModels...)
+
+	if err != nil {
+		panic("Failed to migrate models")
+
+	}
+	return nil
+
 }

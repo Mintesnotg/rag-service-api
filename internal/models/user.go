@@ -3,12 +3,11 @@ package models
 import "time"
 
 type User struct {
-	ID           string    `grom:"type:uuid;default:gen_random_uuid():primary_key"`
-	Email        string    `grom:"not null;uniqueindex"`
-	PasswordHash string    `grom:"not null"`
-	IsActive     bool      `grom:"default:true"`
-	CreatedAt    time.Time `grom:"autoCreateTime"`
-	UpdatedAt    time.Time `grom:"autoUpdateTime"`
-
-	Roles []Role `grom:"many2many:user_roles joinForeignKey:UserID;references:RoleID"`
+	ID           string    `gorm:"type:uuid;default:gen_random_uuid();primary_key"`
+	Email        string    `gorm:"not null;uniqueindex"`
+	PasswordHash string    `gorm:"not null"`
+	IsActive     bool      `gorm:"default:true"`
+	CreatedAt    time.Time `gorm:"autoCreateTime"`
+	UpdatedAt    time.Time `gorm:"autoUpdateTime"`
+	Roles        []Role    `gorm:"many2many:user_roles"`
 }
