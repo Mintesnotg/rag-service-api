@@ -20,6 +20,15 @@ definitions:
     - email
     - password
     type: object
+  handlers.PermissionRequest:
+    properties:
+      role_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - role_ids
+    type: object
   handlers.RegisterRequest:
     properties:
       email:
@@ -117,6 +126,42 @@ paths:
       summary: Register a new user
       tags:
       - Auth
+  /api/permissions:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: role ids
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.PermissionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get permissions for the given role IDs
+      tags:
+      - Permissions
   /api/roles/assign:
     post:
       consumes:

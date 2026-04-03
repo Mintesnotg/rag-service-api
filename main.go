@@ -59,11 +59,6 @@ func main() {
 
 	protected := router.Group("/api")
 	protected.Use(middleware.AuthMiddleware(), permissionHydrator)
-	protected.GET("/protected", func(c *gin.Context) {
-		email, _ := c.Get("userEmail")
-		permissions, _ := c.Get("permissions")
-		c.JSON(200, gin.H{"message": "authorized", "email": email, "permissions": permissions})
-	})
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

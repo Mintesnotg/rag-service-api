@@ -13,5 +13,5 @@ func RegisterPermissionRoutes(router *gin.Engine, handler *handlers.PermissionHa
 	if permMiddleware != nil {
 		group.Use(permMiddleware)
 	}
-	group.POST("", handler.GetPermissions)
+	group.POST("/", handler.GetPermissions)
 }

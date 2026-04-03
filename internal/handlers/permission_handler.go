@@ -22,7 +22,7 @@ func NewPermissionHandler(permissionService services.PermissionService) *Permiss
 
 // GetPermissions godoc
 // @Summary Get permissions for the given role IDs
-// @Tags Permissions
+
 // @Security BearerAuth
 // @Accept json
 // @Produce json
