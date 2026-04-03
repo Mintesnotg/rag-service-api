@@ -26,21 +26,34 @@ func Seed(db *gorm.DB) error {
 		return err
 	}
 
+	// if err := SeedRolePermissions(db); err != nil {
+	// 	return err
+	// }
+
 	log.Println("Database seeding completed successfully")
 	return nil
 }
 
 func seedPermissions(db *gorm.DB) error {
-	perms := []models.Permission{
-		{Name: "read"},
-		{Name: "write"},
-		{Name: "delete"},
+	names := []string{
+		"view_account_management",
+		"view_users",
+		"view_roles",
+		"view_permissions",
+		"view_doc_management",
+		"view_hr_docs",
+		"view_requirement_doc",
+		"view_benefit_docs",
+		"view_time_docs",
+		"view_it_docs",
+		"view_access_docs",
+		"view_apps_docs",
+		"view_security_docs",
 	}
 
-	for _, p := range perms {
+	for _, name := range names {
 		var existing models.Permission
-
-		err := db.Where("name = ?", p.Name).First(&existing).Error
+		err := db.Where("name = ?", name).First(&existing).Error
 		if err == nil {
 			continue
 		}
@@ -49,7 +62,7 @@ func seedPermissions(db *gorm.DB) error {
 			return err
 		}
 
-		if err := db.Create(&p).Error; err != nil {
+		if err := db.Create(&models.Permission{Name: name}).Error; err != nil {
 			return err
 		}
 	}
@@ -86,7 +99,6 @@ func seedRoles(db *gorm.DB) error {
 }
 
 func seedUser(db *gorm.DB) error {
-
 	var count int64
 	if err := db.Model(&models.User{}).Where("email = ?", "admin@example.com").Count(&count).Error; err != nil {
 		return err
@@ -127,5 +139,24 @@ func seedUser(db *gorm.DB) error {
 		return err
 	}
 
+	return nil
+}
+
+func SeedRolePermissions(db *gorm.DB) error {
+	var adminRole models.Role
+	if err := db.Where("name = ?", "admin").Preload("Permissions").First(&adminRole).Error; err != nil {
+		return err
+	}
+
+	var permissions []models.Permission
+	if err := db.Find(&permissions).Error; err != nil {
+		return err
+	}
+
+	if err := db.Model(&adminRole).Association("Permissions").Replace(permissions); err != nil {
+		return err
+	}
+
+	log.Println("Role permissions seeded")
 	return nil
 }

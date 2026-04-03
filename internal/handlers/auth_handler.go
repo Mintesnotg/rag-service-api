@@ -81,7 +81,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	token, roles, err := h.authService.Login(req.Email, req.Password)
+	token, roleIDs, err := h.authService.Login(req.Email, req.Password)
 	if err != nil {
 		switch err {
 		case services.ErrInvalidCredential:
@@ -92,5 +92,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"access_token": token, "token_type": "Bearer", "expires_in": 3600, "roles": roles})
+	c.JSON(http.StatusOK, gin.H{
+		"access_token": token,
+		"token_type":   "Bearer",
+		"expires_in":   3600,
+		"role_ids":     roleIDs,
+	})
 }

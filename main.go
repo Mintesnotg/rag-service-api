@@ -45,19 +45,24 @@ func main() {
 	userRepo := repositories.NewUserRepository(conn)
 	authService := services.NewAuthService(userRepo)
 	roleService := services.NewRoleService(userRepo)
+	permissionRepo := repositories.NewPermissionRepository(conn)
+	permissionService := services.NewPermissionService(permissionRepo)
 
 	authHandler := handlers.NewAuthHandler(authService)
 	roleHandler := handlers.NewRoleHandler(roleService)
+	permissionHandler := handlers.NewPermissionHandler(permissionService)
+	permissionHydrator := middleware.PermissionsMiddleware(permissionService)
 
 	routes.RegisterAuthRoutes(router, authHandler)
-	routes.RegisterRoleRoutes(router, roleHandler)
+	routes.RegisterPermissionRoutes(router, permissionHandler, permissionHydrator)
+	routes.RegisterRoleRoutes(router, roleHandler, permissionHydrator)
 
 	protected := router.Group("/api")
-	protected.Use(middleware.AuthMiddleware())
+	protected.Use(middleware.AuthMiddleware(), permissionHydrator)
 	protected.GET("/protected", func(c *gin.Context) {
 		email, _ := c.Get("userEmail")
-		roles, _ := c.Get("roles")
-		c.JSON(200, gin.H{"message": "authorized", "email": email, "roles": roles})
+		permissions, _ := c.Get("permissions")
+		c.JSON(200, gin.H{"message": "authorized", "email": email, "permissions": permissions})
 	})
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

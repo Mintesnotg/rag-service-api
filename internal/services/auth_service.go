@@ -76,24 +76,24 @@ func (s *authService) Login(email, password string) (string, []string, error) {
 		return "", nil, err
 	}
 
-	roleNames := roleNames(roles)
+	roleIDs := roleIDsFromRoles(roles)
 
-	token, err := utils.GenerateJWT(user.ID, user.Email, roleNames, time.Hour)
+	token, err := utils.GenerateJWT(user.ID, user.Email, roleIDs, time.Hour)
 	if err != nil {
 		return "", nil, err
 	}
 
-	return token, roleNames, nil
+	return token, roleIDs, nil
 }
 
 func isValidEmail(email string) bool {
 	return len(email) >= 3 && strings.Contains(email, "@")
 }
 
-func roleNames(roles []models.Role) []string {
-	names := make([]string, 0, len(roles))
+func roleIDsFromRoles(roles []models.Role) []string {
+	ids := make([]string, 0, len(roles))
 	for _, r := range roles {
-		names = append(names, r.Name)
+		ids = append(ids, r.ID)
 	}
-	return names
+	return ids
 }
