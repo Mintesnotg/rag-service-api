@@ -1,4 +1,4 @@
-package models
+package user
 
 type Role struct {
 	ID string `gorm:"type:uuid;default:gen_random_uuid();primary_key"`
