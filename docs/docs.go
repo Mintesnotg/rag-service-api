@@ -144,16 +144,17 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "tags": [
+                    "Permissions"
+                ],
                 "consumes": [
                     "application/json"
                 ],
                 "produces": [
                     "application/json"
                 ],
-                "tags": [
-                    "Permissions"
-                ],
-                "summary": "Get permissions for the given role IDs",
+                "summary": "Get api permissions",
+
                 "parameters": [
                     {
                         "description": "role ids",
