@@ -159,9 +159,6 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Get permissions for the given role IDs
-      tags:
-      - Permissions
   /api/roles/assign:
     post:
       consumes:

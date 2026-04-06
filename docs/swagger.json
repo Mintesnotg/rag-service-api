@@ -143,10 +143,6 @@
                 "produces": [
                     "application/json"
                 ],
-                "tags": [
-                    "Permissions"
-                ],
-                "summary": "Get permissions for the given role IDs",
                 "parameters": [
                     {
                         "description": "role ids",
