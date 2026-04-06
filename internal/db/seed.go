@@ -5,26 +5,32 @@ import (
 	"log"
 	"time"
 
-	"go-api/internal/models"
+	docmodels "go-api/internal/models/doc-category"
+	usermodels "go-api/internal/models/user"
 	"go-api/internal/utils"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func Seed(db *gorm.DB) error {
 	log.Println("Starting database seeding...")
 
-	if err := seedRoles(db); err != nil {
-		return err
-	}
+	// if err := seedRoles(db); err != nil {
+	// 	return err
+	// }
 
-	if err := seedPermissions(db); err != nil {
-		return err
-	}
+	// if err := seedPermissions(db); err != nil {
+	// 	return err
+	// }
 
-	if err := seedUser(db); err != nil {
-		return err
-	}
+	// if err := seedDocCategories(db); err != nil {
+	// 	return err
+	// }
+
+	// if err := seedUser(db); err != nil {
+	// 	return err
+	// }
 
 	// if err := SeedRolePermissions(db); err != nil {
 	// 	return err
@@ -52,7 +58,7 @@ func seedPermissions(db *gorm.DB) error {
 	}
 
 	for _, name := range names {
-		var existing models.Permission
+		var existing usermodels.Permission
 		err := db.Where("name = ?", name).First(&existing).Error
 		if err == nil {
 			continue
@@ -62,7 +68,7 @@ func seedPermissions(db *gorm.DB) error {
 			return err
 		}
 
-		if err := db.Create(&models.Permission{Name: name}).Error; err != nil {
+		if err := db.Create(&usermodels.Permission{Name: name}).Error; err != nil {
 			return err
 		}
 	}
@@ -71,14 +77,44 @@ func seedPermissions(db *gorm.DB) error {
 	return nil
 }
 
+func seedDocCategories(db *gorm.DB) error {
+	categories := []docmodels.DocCategory{
+		{
+			Name:        "HR",
+			Description: "Human resources documents and policies",
+		},
+		{
+			Name:        "IT",
+			Description: "Information technology documents and procedures",
+		},
+		{
+			Name:        "Finance",
+			Description: "Finance documents, reports, and controls",
+		},
+	}
+
+	if err := db.Clauses(clause.OnConflict{
+		Columns: []clause.Column{{Name: "name"}},
+		DoUpdates: clause.Assignments(map[string]interface{}{
+			"description": gorm.Expr("EXCLUDED.description"),
+			"updated_at":  gorm.Expr("NOW()"),
+		}),
+	}).Create(&categories).Error; err != nil {
+		return err
+	}
+
+	log.Println("Document categories seeded")
+	return nil
+}
+
 func seedRoles(db *gorm.DB) error {
-	roles := []models.Role{
+	roles := []usermodels.Role{
 		{Name: "admin"},
 		{Name: "user"},
 	}
 
 	for _, role := range roles {
-		var existing models.Role
+		var existing usermodels.Role
 
 		err := db.Where("name = ?", role.Name).First(&existing).Error
 		if err == nil {
@@ -100,7 +136,7 @@ func seedRoles(db *gorm.DB) error {
 
 func seedUser(db *gorm.DB) error {
 	var count int64
-	if err := db.Model(&models.User{}).Where("email = ?", "admin@example.com").Count(&count).Error; err != nil {
+	if err := db.Model(&usermodels.User{}).Where("email = ?", "admin@example.com").Count(&count).Error; err != nil {
 		return err
 	}
 
@@ -114,10 +150,10 @@ func seedUser(db *gorm.DB) error {
 		return err
 	}
 
-	var adminRole models.Role
+	var adminRole usermodels.Role
 	if err := db.Where("name = ?", "admin").First(&adminRole).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			adminRole = models.Role{Name: "admin"}
+			adminRole = usermodels.Role{Name: "admin"}
 			if err := db.Create(&adminRole).Error; err != nil {
 				return err
 			}
@@ -126,16 +162,16 @@ func seedUser(db *gorm.DB) error {
 		}
 	}
 
-	user := models.User{
+	adminUser := usermodels.User{
 		Email:        "admin@example.com",
 		PasswordHash: hashedPassword,
 		IsActive:     true,
-		Roles:        []models.Role{adminRole},
+		Roles:        []usermodels.Role{adminRole},
 
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	if err := db.Create(&user).Error; err != nil {
+	if err := db.Create(&adminUser).Error; err != nil {
 		return err
 	}
 
@@ -143,12 +179,12 @@ func seedUser(db *gorm.DB) error {
 }
 
 func SeedRolePermissions(db *gorm.DB) error {
-	var adminRole models.Role
+	var adminRole usermodels.Role
 	if err := db.Where("name = ?", "admin").Preload("Permissions").First(&adminRole).Error; err != nil {
 		return err
 	}
 
-	var permissions []models.Permission
+	var permissions []usermodels.Permission
 	if err := db.Find(&permissions).Error; err != nil {
 		return err
 	}

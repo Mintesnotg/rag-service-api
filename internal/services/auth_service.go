@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"go-api/internal/models"
+	models "go-api/internal/models/user"
 	"go-api/internal/repositories"
 	"go-api/internal/utils"
 )

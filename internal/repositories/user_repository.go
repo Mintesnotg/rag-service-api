@@ -3,7 +3,7 @@ package repositories
 import (
 	"errors"
 
-	"go-api/internal/models"
+	"go-api/internal/models/user"
 
 	"gorm.io/gorm"
 )
@@ -16,12 +16,12 @@ var (
 )
 
 type UserRepository interface {
-	Create(user *models.User) error
-	FindByEmail(email string) (*models.User, error)
-	FindByID(id string) (*models.User, error)
-	FindRoleByID(id string) (*models.Role, error)
+	Create(user *user.User) error
+	FindByEmail(email string) (*user.User, error)
+	FindByID(id string) (*user.User, error)
+	FindRoleByID(id string) (*user.Role, error)
 	AssignRoleToUser(userID, roleID string) error
-	GetRolesByUserID(userID string) ([]models.Role, error)
+	GetRolesByUserID(userID string) ([]user.Role, error)
 }
 
 type userRepository struct {
@@ -32,19 +32,19 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 	return &userRepository{db: db}
 }
 
-func (r *userRepository) Create(user *models.User) error {
+func (r *userRepository) Create(user *user.User) error {
 	if r.db == nil {
 		return ErrNilDB
 	}
 	return r.db.Create(user).Error
 }
 
-func (r *userRepository) FindByEmail(email string) (*models.User, error) {
+func (r *userRepository) FindByEmail(email string) (*user.User, error) {
 	if r.db == nil {
 		return nil, ErrNilDB
 	}
 
-	var user models.User
+	var user user.User
 
 	if err := r.db.Where("email = ?", email).Preload("Roles").First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -56,12 +56,12 @@ func (r *userRepository) FindByEmail(email string) (*models.User, error) {
 	return &user, nil
 }
 
-func (r *userRepository) FindByID(id string) (*models.User, error) {
+func (r *userRepository) FindByID(id string) (*user.User, error) {
 	if r.db == nil {
 		return nil, ErrNilDB
 	}
 
-	var user models.User
+	var user user.User
 	if err := r.db.Where("id = ?", id).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotFound
@@ -71,12 +71,12 @@ func (r *userRepository) FindByID(id string) (*models.User, error) {
 	return &user, nil
 }
 
-func (r *userRepository) FindRoleByID(id string) (*models.Role, error) {
+func (r *userRepository) FindRoleByID(id string) (*user.Role, error) {
 	if r.db == nil {
 		return nil, ErrNilDB
 	}
 
-	var role models.Role
+	var role user.Role
 	if err := r.db.Where("id = ?", id).First(&role).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrRoleNotFound
@@ -106,15 +106,15 @@ func (r *userRepository) AssignRoleToUser(userID, roleID string) error {
 	return nil
 }
 
-func (r *userRepository) GetRolesByUserID(userID string) ([]models.Role, error) {
+func (r *userRepository) GetRolesByUserID(userID string) ([]user.Role, error) {
 	if r.db == nil {
 		return nil, ErrNilDB
 	}
 
-	var roles []models.Role
+	var roles []user.Role
 	if err := r.db.Joins("JOIN user_roles ur ON ur.role_id = roles.id").Where("ur.user_id = ?", userID).Find(&roles).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return []models.Role{}, nil
+			return []user.Role{}, nil
 		}
 		return nil, err
 	}
