@@ -3,11 +3,14 @@ package db
 import (
 	"fmt"
 	models "go-api/internal/models"
+	"log"
 
 	"gorm.io/gorm"
 )
 
 func Migrate(db *gorm.DB) error {
+
+	log.Println("Migrating to database ...")
 	if err := ensurePostgresExtensions(db); err != nil {
 		return err
 	}
@@ -15,6 +18,7 @@ func Migrate(db *gorm.DB) error {
 	if err := db.AutoMigrate(models.MigrateModels...); err != nil {
 		return fmt.Errorf("auto migrate models: %w", err)
 	}
+	log.Println(" finished Migrating to database ...")
 
 	return nil
 }
