@@ -1,11 +1,15 @@
 package enums
 
-type DocumentStatus string
+// RecordStatus represents the active/inactive state of a record.
+type RecordStatus string
 
 const (
-	DocumentStatusActive   DocumentStatus = "active"
-	DocumentStatusInactive DocumentStatus = "inactive"
+	StatusActive   RecordStatus = "active"
+	StatusInactive RecordStatus = "inactive"
 )
+
+// DocumentStatus is kept as an alias for backward compatibility, if needed elsewhere.
+type DocumentStatus = RecordStatus
 
 type ProcessingStatus string
 

@@ -16,7 +16,7 @@ type Document struct {
 	FileSize       int64       `gorm:"column:file_size"`
 
 	// ✅ Business status
-	Status enum.DocumentStatus `gorm:"type:varchar(20);default:'active';not null"`
+	Status enum.RecordStatus `gorm:"type:varchar(20);default:'active';not null"`
 
 	// ✅ RAG processing status
 	ProcessingStatus enum.ProcessingStatus `gorm:"column:processing_status;type:varchar(20);default:'pending';not null"`

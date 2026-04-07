@@ -47,15 +47,19 @@ func main() {
 	roleService := services.NewRoleService(userRepo)
 	permissionRepo := repositories.NewPermissionRepository(conn)
 	permissionService := services.NewPermissionService(permissionRepo)
+	docCategoryRepo := repositories.NewDocCategoryRepository(conn)
+	docCategoryService := services.NewDocCategoryService(docCategoryRepo)
 
 	authHandler := handlers.NewAuthHandler(authService)
 	roleHandler := handlers.NewRoleHandler(roleService)
 	permissionHandler := handlers.NewPermissionHandler(permissionService)
+	docCategoryHandler := handlers.NewDocCategoryHandler(docCategoryService)
 	permissionHydrator := middleware.PermissionsMiddleware(permissionService)
 
 	routes.RegisterAuthRoutes(router, authHandler)
 	routes.RegisterPermissionRoutes(router, permissionHandler, permissionHydrator)
 	routes.RegisterRoleRoutes(router, roleHandler, permissionHydrator)
+	routes.RegisterDocCategoryRoutes(router, docCategoryHandler, permissionHydrator)
 
 	protected := router.Group("/api")
 	protected.Use(middleware.AuthMiddleware(), permissionHydrator)
