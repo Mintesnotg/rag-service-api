@@ -11,13 +11,11 @@ import (
 
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid authorization header"})
+		tokenString := extractToken(c)
+		if tokenString == "" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid token"})
 			return
 		}
-
-		tokenString := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer"))
 
 		claims, err := utils.ValidateJWT(tokenString)
 		if err != nil {
@@ -31,4 +29,23 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+func extractToken(c *gin.Context) string {
+	authHeader := c.GetHeader("Authorization")
+	if strings.HasPrefix(authHeader, "Bearer") {
+		return strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer"))
+	}
+
+	if cookie, err := c.Cookie("__Host-token"); err == nil && cookie != "" {
+		return cookie
+	}
+	if cookie, err := c.Cookie("token"); err == nil && cookie != "" {
+		return cookie
+	}
+	if cookie, err := c.Cookie("access_token"); err == nil && cookie != "" {
+		return cookie
+	}
+
+	return ""
 }

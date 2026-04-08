@@ -1,0 +1,4 @@
+./auth_routes.go
+./doc_category_routes.go
+./permission_routes.go
+./role_routes.go

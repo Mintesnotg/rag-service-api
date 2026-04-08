@@ -1,0 +1,4 @@
+./auth_handler.go
+./doc_category_handler.go
+./permission_handler.go
+./role_handler.go

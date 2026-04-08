@@ -1,0 +1,5 @@
+./auth_service.go
+./doc_category_service.go
+./doc_service.go
+./permission_service.go
+./role_service.go
