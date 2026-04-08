@@ -1,6 +1,7 @@
 package user
 
 type Permission struct {
-	ID   string `gorm:"type:uuid;default:gen_random_uuid();primary_key"`
-	Name string `gorm:"not null"`
+	ID       string `gorm:"type:uuid;default:gen_random_uuid();primary_key"`
+	Name     string `gorm:"not null;uniqueIndex"`
+	IsActive bool   `gorm:"not null;default:true"`
 }

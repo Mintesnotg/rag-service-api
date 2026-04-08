@@ -2,11 +2,14 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 
 	"go-api/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
+
+const permissionHeader = "X-Permission"
 
 // PermissionsMiddleware hydrates the request with permissions resolved from role IDs in the JWT.
 func PermissionsMiddleware(permissionService services.PermissionService) gin.HandlerFunc {
@@ -40,34 +43,55 @@ func PermissionsMiddleware(permissionService services.PermissionService) gin.Han
 	}
 }
 
-// RequirePermission ensures the hydrated permissions contain the required one.
+// RequirePermission ensures the hydrated permissions contain the required one (route-level check).
 func RequirePermission(required string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		value, exists := c.Get("permissions")
-		if !exists {
+		if hasPermission(c, required) {
+			c.Next()
+			return
+		}
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+			"error": "unauthorized: missing required permission",
+		})
+	}
+}
+
+// RequireHeaderPermission validates the permission claim sent by the client in the header.
+// Clients should set X-Permission: <permission_name> for every protected request.
+func RequireHeaderPermission() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		requested := strings.TrimSpace(c.GetHeader(permissionHeader))
+		if requested == "" {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"error": "unauthorized: permissions not loaded",
+				"error": "unauthorized: missing permission claim header",
 			})
 			return
 		}
 
-		perms, ok := value.([]string)
-		if !ok || len(perms) == 0 {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"error": "unauthorized: no permissions assigned",
-			})
+		if hasPermission(c, requested) {
+			c.Next()
 			return
-		}
-
-		for _, p := range perms {
-			if p == required {
-				c.Next()
-				return
-			}
 		}
 
 		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 			"error": "unauthorized: missing required permission",
 		})
 	}
+}
+
+func hasPermission(c *gin.Context, required string) bool {
+	value, exists := c.Get("permissions")
+	if !exists {
+		return false
+	}
+	perms, ok := value.([]string)
+	if !ok || len(perms) == 0 {
+		return false
+	}
+	for _, p := range perms {
+		if p == required {
+			return true
+		}
+	}
+	return false
 }

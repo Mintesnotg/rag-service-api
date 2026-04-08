@@ -1,0 +1,4 @@
+./document_category.go
+./document_repository.go
+./permission_repository.go
+./user_repository.go

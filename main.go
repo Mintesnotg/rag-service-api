@@ -55,9 +55,10 @@ func main() {
 	permissionHandler := handlers.NewPermissionHandler(permissionService)
 	docCategoryHandler := handlers.NewDocCategoryHandler(docCategoryService)
 	permissionHydrator := middleware.PermissionsMiddleware(permissionService)
+	headerPermissionCheck := middleware.RequireHeaderPermission()
 
 	routes.RegisterAuthRoutes(router, authHandler)
-	routes.RegisterPermissionRoutes(router, permissionHandler, permissionHydrator)
+	routes.RegisterPermissionRoutes(router, permissionHandler, permissionHydrator, headerPermissionCheck)
 	routes.RegisterRoleRoutes(router, roleHandler, permissionHydrator)
 	routes.RegisterDocCategoryRoutes(router, docCategoryHandler, permissionHydrator)
 
