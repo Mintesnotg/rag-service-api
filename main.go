@@ -43,23 +43,26 @@ func main() {
 	router.Use(middleware.CORSMiddleware())
 
 	userRepo := repositories.NewUserRepository(conn)
-	authService := services.NewAuthService(userRepo)
-	roleService := services.NewRoleService(userRepo)
+	roleRepo := repositories.NewRoleRepository(conn)
 	permissionRepo := repositories.NewPermissionRepository(conn)
-	permissionService := services.NewPermissionService(permissionRepo)
 	docCategoryRepo := repositories.NewDocCategoryRepository(conn)
+
+	authService := services.NewAuthService(userRepo)
+	roleService := services.NewRoleService(roleRepo)
+	permissionService := services.NewPermissionService(permissionRepo)
 	docCategoryService := services.NewDocCategoryService(docCategoryRepo)
 
 	authHandler := handlers.NewAuthHandler(authService)
 	roleHandler := handlers.NewRoleHandler(roleService)
 	permissionHandler := handlers.NewPermissionHandler(permissionService)
 	docCategoryHandler := handlers.NewDocCategoryHandler(docCategoryService)
+
 	permissionHydrator := middleware.PermissionsMiddleware(permissionService)
 	headerPermissionCheck := middleware.RequireHeaderPermission()
 
 	routes.RegisterAuthRoutes(router, authHandler)
 	routes.RegisterPermissionRoutes(router, permissionHandler, permissionHydrator, headerPermissionCheck)
-	routes.RegisterRoleRoutes(router, roleHandler, permissionHydrator)
+	routes.RegisterRoleRoutes(router, roleHandler, permissionHydrator, headerPermissionCheck)
 	routes.RegisterDocCategoryRoutes(router, docCategoryHandler, permissionHydrator)
 
 	protected := router.Group("/api")
