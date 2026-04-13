@@ -16,25 +16,25 @@ import (
 func Seed(db *gorm.DB) error {
 	log.Println("Starting database seeding...")
 
-	// if err := seedRoles(db); err != nil {
-	// 	return err
-	// }
+	if err := seedRoles(db); err != nil {
+		return err
+	}
 
-	// if err := seedPermissions(db); err != nil {
-	// 	return err
-	// }
+	if err := seedPermissions(db); err != nil {
+		return err
+	}
 
-	// if err := seedDocCategories(db); err != nil {
-	// 	return err
-	// }
+	if err := seedDocCategories(db); err != nil {
+		return err
+	}
 
-	// if err := seedUser(db); err != nil {
-	// 	return err
-	// }
+	if err := seedUser(db); err != nil {
+		return err
+	}
 
-	// if err := SeedRolePermissions(db); err != nil {
-	// 	return err
-	// }
+	if err := SeedRolePermissions(db); err != nil {
+		return err
+	}
 
 	log.Println("Database seeding completed successfully")
 	return nil
@@ -46,6 +46,12 @@ func seedPermissions(db *gorm.DB) error {
 		"view_users",
 		"view_roles",
 		"view_permissions",
+		"create_roles",
+		"update_roles",
+		"delete_roles",
+		"create_permissions",
+		"update_permissions",
+		"delete_permissions",
 		"view_doc_management",
 		"view_hr_docs",
 		"view_requirement_doc",

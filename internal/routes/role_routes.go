@@ -7,11 +7,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRoleRoutes(router *gin.Engine, roleHandler *handlers.RoleHandler, permMiddleware gin.HandlerFunc) {
+func RegisterRoleRoutes(router *gin.Engine, roleHandler *handlers.RoleHandler, permMiddleware gin.HandlerFunc, headerCheck gin.HandlerFunc) {
 	rolesGroup := router.Group("/api/roles")
 	rolesGroup.Use(middleware.AuthMiddleware())
 	if permMiddleware != nil {
 		rolesGroup.Use(permMiddleware)
 	}
-	rolesGroup.POST("/assign", roleHandler.AssignRole)
+	if headerCheck != nil {
+		rolesGroup.Use(headerCheck)
+	}
+
+	rolesGroup.GET("", roleHandler.ListRoles)
+	rolesGroup.POST("", roleHandler.CreateRole)
+	rolesGroup.PUT(":id", roleHandler.UpdateRole)
+	rolesGroup.DELETE(":id", roleHandler.DeleteRole)
 }

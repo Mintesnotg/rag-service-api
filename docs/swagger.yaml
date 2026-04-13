@@ -1,15 +1,5 @@
 basePath: /
 definitions:
-  handlers.AssignRoleRequest:
-    properties:
-      role_id:
-        type: string
-      user_id:
-        type: string
-    required:
-    - role_id
-    - user_id
-    type: object
   handlers.CreateDocCategoryRequest:
     properties:
       description:
@@ -23,6 +13,17 @@ definitions:
     properties:
       name:
         type: string
+    required:
+    - name
+    type: object
+  handlers.CreateRoleRequest:
+    properties:
+      name:
+        type: string
+      permission_ids:
+        items:
+          type: string
+        type: array
     required:
     - name
     type: object
@@ -87,6 +88,17 @@ definitions:
     required:
     - name
     type: object
+  handlers.UpdateRoleRequest:
+    properties:
+      name:
+        type: string
+      permission_ids:
+        items:
+          type: string
+        type: array
+    required:
+    - name
+    type: object
   services.PermissionDTO:
     properties:
       id:
@@ -95,6 +107,21 @@ definitions:
         type: boolean
       name:
         type: string
+    type: object
+  services.RoleDTO:
+    properties:
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      permission_count:
+        type: integer
+      permissions:
+        items:
+          $ref: '#/definitions/services.PermissionDTO'
+        type: array
     type: object
 info:
   contact: {}
@@ -541,17 +568,21 @@ paths:
       summary: Get permissions for the given role IDs
       tags:
       - Permissions
-  /api/roles/assign:
-    post:
-      consumes:
-      - application/json
+  /api/roles:
+    get:
       parameters:
-      - description: assign role
-        in: body
-        name: data
-        required: true
-        schema:
-          $ref: '#/definitions/handlers.AssignRoleRequest'
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        type: integer
+      - description: Search by name
+        in: query
+        name: search
+        type: string
       produces:
       - application/json
       responses:
@@ -560,12 +591,62 @@ paths:
           schema:
             additionalProperties: true
             type: object
+      security:
+      - BearerAuth: []
+      summary: List roles
+      tags:
+      - Roles
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: create role
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.CreateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/services.RoleDTO'
         "400":
           description: Bad Request
           schema:
             additionalProperties:
               type: string
             type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a role
+      tags:
+      - Roles
+  /api/roles/{id}:
+    delete:
+      parameters:
+      - description: role id
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: deleted
         "404":
           description: Not Found
           schema:
@@ -580,7 +661,58 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      summary: Assign a role to a user
+      summary: Soft delete a role
+      tags:
+      - Roles
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: role id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: update role
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.UpdateRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.RoleDTO'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a role
       tags:
       - Roles
 securityDefinitions:
