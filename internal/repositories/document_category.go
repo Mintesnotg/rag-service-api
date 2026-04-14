@@ -17,7 +17,7 @@ var (
 type Doc_CategoryRepository interface {
 	Create(category *doccategory.DocCategory) error
 	FindByID(id string) (*doccategory.DocCategory, error)
-	GetAllDocCategory() ([]doccategory.DocCategory, error)
+	GetAllDocCategory(search string, limit, offset int) ([]doccategory.DocCategory, error)
 	UpdateDocCategory(category *doccategory.DocCategory) error
 	DeleteDocCategory(id string) error
 }
@@ -52,16 +52,19 @@ func (r *docCategoryRepository) FindByID(id string) (*doccategory.DocCategory, e
 	return &category, nil
 }
 
-func (r *docCategoryRepository) GetAllDocCategory() ([]doccategory.DocCategory, error) {
-	if r.db == nil {
-		return nil, ErrCatNilDB
-	}
-
+func (r *docCategoryRepository) GetAllDocCategory(search string, limit, offset int) ([]doccategory.DocCategory, error) {
 	var categories []doccategory.DocCategory
-	if err := r.db.Find(&categories).Error; err != nil {
+
+	query := r.db.Model(&doccategory.DocCategory{}).Where("status = 'active' ")
+
+	if search != "" {
+		query = query.Where("LOWER(name) LIKE ?", "%"+search+"%")
+	}
+	if err := query.Limit(limit).Offset(offset).Find(&categories).Error; err != nil {
 		return nil, err
 	}
 	return categories, nil
+
 }
 
 func (r *docCategoryRepository) UpdateDocCategory(category *doccategory.DocCategory) error {

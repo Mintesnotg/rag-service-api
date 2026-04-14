@@ -58,7 +58,11 @@ func (r *permissionRepository) List(search string, limit, offset int) ([]user.Pe
 		return nil, 0, err
 	}
 
-	if err := query.Order("name ASC").Limit(limit).Offset(offset).Find(&perms).Error; err != nil {
+	// if err := query.Order("name ASC").Limit(limit).Offset(offset).Find(&perms).Error; err != nil {
+	// 	return nil, 0, err
+	// }
+
+	if err := query.Order("name ASC").Find(&perms).Error; err != nil {
 		return nil, 0, err
 	}
 

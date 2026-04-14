@@ -17,7 +17,7 @@ type DocCategoryService interface {
 	CreateDocCategory(name, description string) (*doccategory.DocCategory, error)
 	UpdateDocCategory(id, name, description string) (*doccategory.DocCategory, error)
 	DeleteDocCategory(id string) error
-	GetAllDocCategory() ([]doccategory.DocCategory, error)
+	GetAllDocCategory(search string, page, pageSize int) ([]doccategory.DocCategory, error)
 	GetDocCategoryByID(id string) (*doccategory.DocCategory, error)
 }
 
@@ -89,8 +89,17 @@ func (s *docCategoryService) DeleteDocCategory(id string) error {
 	return nil
 }
 
-func (s *docCategoryService) GetAllDocCategory() ([]doccategory.DocCategory, error) {
-	return s.repo.GetAllDocCategory()
+func (s *docCategoryService) GetAllDocCategory(search string, page, pageSize int) ([]doccategory.DocCategory, error) {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	offset := (page - 1) * pageSize
+
+	categories, err := s.repo.GetAllDocCategory(search, pageSize, offset)
+	return categories, err
 }
 
 func (s *docCategoryService) GetDocCategoryByID(id string) (*doccategory.DocCategory, error) {
