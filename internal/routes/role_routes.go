@@ -19,6 +19,6 @@ func RegisterRoleRoutes(router *gin.Engine, roleHandler *handlers.RoleHandler, p
 
 	rolesGroup.GET("", roleHandler.ListRoles)
 	rolesGroup.POST("", roleHandler.CreateRole)
-	rolesGroup.PUT(":id", roleHandler.UpdateRole)
-	rolesGroup.DELETE(":id", roleHandler.DeleteRole)
+	rolesGroup.PUT("/:id", roleHandler.UpdateRole)
+	rolesGroup.DELETE("/:id", roleHandler.DeleteRole)
 }

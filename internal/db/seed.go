@@ -61,6 +61,11 @@ func seedPermissions(db *gorm.DB) error {
 		"view_access_docs",
 		"view_apps_docs",
 		"view_security_docs",
+		"view_docs_categories",
+		"create_doc_category",
+		"update_doc_category",
+		"delete_doc_category",
+		"document.manage",
 	}
 
 	for _, name := range names {

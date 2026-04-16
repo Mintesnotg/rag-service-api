@@ -9,7 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const permissionHeader = "X-Permission"
+const (
+	permissionHeader       = "Permission"
+	legacyPermissionHeader = "X-Permission"
+)
 
 // PermissionsMiddleware hydrates the request with permissions resolved from role IDs in the JWT.
 func PermissionsMiddleware(permissionService services.PermissionService) gin.HandlerFunc {
@@ -62,8 +65,11 @@ func RequireHeaderPermission() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		requested := strings.TrimSpace(c.GetHeader(permissionHeader))
 		if requested == "" {
+			requested = strings.TrimSpace(c.GetHeader(legacyPermissionHeader))
+		}
+		if requested == "" {
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"error": "unauthorized: missing permission claim header",
+				"error": "unauthorized: missing permission header",
 			})
 			return
 		}

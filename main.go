@@ -13,6 +13,7 @@ import (
 	"go-api/internal/repositories"
 	"go-api/internal/routes"
 	"go-api/internal/services"
+	"go-api/internal/storage"
 
 	_ "go-api/docs"
 )
@@ -46,16 +47,24 @@ func main() {
 	roleRepo := repositories.NewRoleRepository(conn)
 	permissionRepo := repositories.NewPermissionRepository(conn)
 	docCategoryRepo := repositories.NewDocCategoryRepository(conn)
+	documentRepo := repositories.NewDocumentRepository(conn)
+
+	minioStorage, err := storage.NewMinIOStorage()
+	if err != nil {
+		log.Fatalf("minio initialization failed: %v", err)
+	}
 
 	authService := services.NewAuthService(userRepo)
 	roleService := services.NewRoleService(roleRepo)
 	permissionService := services.NewPermissionService(permissionRepo)
 	docCategoryService := services.NewDocCategoryService(docCategoryRepo)
+	documentService := services.NewDocumentService(documentRepo, docCategoryRepo, minioStorage)
 
 	authHandler := handlers.NewAuthHandler(authService)
 	roleHandler := handlers.NewRoleHandler(roleService)
 	permissionHandler := handlers.NewPermissionHandler(permissionService)
 	docCategoryHandler := handlers.NewDocCategoryHandler(docCategoryService)
+	documentHandler := handlers.NewDocumentHandler(documentService)
 
 	permissionHydrator := middleware.PermissionsMiddleware(permissionService)
 	headerPermissionCheck := middleware.RequireHeaderPermission()
@@ -64,9 +73,7 @@ func main() {
 	routes.RegisterPermissionRoutes(router, permissionHandler, permissionHydrator, headerPermissionCheck)
 	routes.RegisterRoleRoutes(router, roleHandler, permissionHydrator, headerPermissionCheck)
 	routes.RegisterDocCategoryRoutes(router, docCategoryHandler, permissionHydrator)
-
-	protected := router.Group("/api")
-	protected.Use(middleware.AuthMiddleware(), permissionHydrator)
+	routes.RegisterDocumentRoutes(router, documentHandler, permissionHydrator, headerPermissionCheck)
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

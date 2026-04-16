@@ -17,6 +17,7 @@ var (
 type Doc_CategoryRepository interface {
 	Create(category *doccategory.DocCategory) error
 	FindByID(id string) (*doccategory.DocCategory, error)
+	FindByName(name string) (*doccategory.DocCategory, error)
 	GetAllDocCategory(search string, limit, offset int) ([]doccategory.DocCategory, error)
 	UpdateDocCategory(category *doccategory.DocCategory) error
 	DeleteDocCategory(id string) error
@@ -49,6 +50,25 @@ func (r *docCategoryRepository) FindByID(id string) (*doccategory.DocCategory, e
 		}
 		return nil, err
 	}
+	return &category, nil
+}
+
+func (r *docCategoryRepository) FindByName(name string) (*doccategory.DocCategory, error) {
+	if r.db == nil {
+		return nil, ErrCatNilDB
+	}
+
+	var category doccategory.DocCategory
+	if err := r.db.
+		Where("LOWER(name) = LOWER(?)", name).
+		Where("status = ?", enums.StatusActive).
+		First(&category).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrDocCatNotFound
+		}
+		return nil, err
+	}
+
 	return &category, nil
 }
 

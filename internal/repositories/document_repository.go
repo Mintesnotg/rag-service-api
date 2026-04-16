@@ -10,17 +10,17 @@ import (
 )
 
 var (
-	ErrDocNilDB         = errors.New("nil database connection")
+	ErrDocumentNilDB    = errors.New("nil database connection")
 	ErrDocumentNotFound = errors.New("document not found")
 )
 
 // DocumentRepository defines operations for working with documents.
 type DocumentRepository interface {
 	Create(document *doccategory.Document) error
-	FindDocByID(id string) (*doccategory.Document, error)
-	GetAllDocument() ([]doccategory.Document, error)
-	UpdateDocument(document *doccategory.Document) error
-	DeleteDocument(id string) error
+	FindByID(id string) (*doccategory.Document, error)
+	ListByCategory(categoryName string) ([]doccategory.Document, error)
+	Update(document *doccategory.Document) error
+	SoftDelete(id string) error
 }
 
 type documentRepository struct {
@@ -33,52 +33,74 @@ func NewDocumentRepository(db *gorm.DB) DocumentRepository {
 
 func (r *documentRepository) Create(document *doccategory.Document) error {
 	if r.db == nil {
-		return ErrDocNilDB
+		return ErrDocumentNilDB
 	}
 	return r.db.Create(document).Error
 }
 
-func (r *documentRepository) FindDocByID(id string) (*doccategory.Document, error) {
+func (r *documentRepository) FindByID(id string) (*doccategory.Document, error) {
 	if r.db == nil {
-		return nil, ErrDocNilDB
+		return nil, ErrDocumentNilDB
 	}
 
 	var document doccategory.Document
-	if err := r.db.Where("id = ?", id).Preload("Category").First(&document).Error; err != nil {
+	if err := r.db.
+		Preload("Category").
+		Where("id = ?", id).
+		Where("status = ?", enums.StatusActive).
+		First(&document).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrDocumentNotFound
 		}
 		return nil, err
 	}
+
 	return &document, nil
 }
 
-func (r *documentRepository) GetAllDocument() ([]doccategory.Document, error) {
+func (r *documentRepository) ListByCategory(categoryName string) ([]doccategory.Document, error) {
 	if r.db == nil {
-		return nil, ErrDocNilDB
+		return nil, ErrDocumentNilDB
 	}
 
 	var documents []doccategory.Document
-	if err := r.db.Preload("Category").Find(&documents).Error; err != nil {
+
+	query := r.db.
+		Model(&doccategory.Document{}).
+		Preload("Category").
+		Joins("JOIN doc_categories ON doc_categories.id = documents.category_id").
+		Where("documents.status = ?", enums.StatusActive).
+		Where("doc_categories.status = ?", enums.StatusActive)
+
+	if categoryName != "" {
+		query = query.Where("LOWER(doc_categories.name) = LOWER(?)", categoryName)
+	}
+
+	if err := query.
+		Order("documents.created_at DESC").
+		Find(&documents).Error; err != nil {
 		return nil, err
 	}
+
 	return documents, nil
 }
 
-func (r *documentRepository) UpdateDocument(document *doccategory.Document) error {
+func (r *documentRepository) Update(document *doccategory.Document) error {
 	if r.db == nil {
-		return ErrDocNilDB
+		return ErrDocumentNilDB
 	}
 	return r.db.Save(document).Error
 }
 
-func (r *documentRepository) DeleteDocument(id string) error {
+func (r *documentRepository) SoftDelete(id string) error {
 	if r.db == nil {
-		return ErrDocNilDB
+		return ErrDocumentNilDB
 	}
 
-	res := r.db.Model(&doccategory.Document{}).
+	res := r.db.
+		Model(&doccategory.Document{}).
 		Where("id = ?", id).
+		Where("status = ?", enums.StatusActive).
 		Update("status", enums.StatusInactive)
 
 	if res.Error != nil {
@@ -87,5 +109,6 @@ func (r *documentRepository) DeleteDocument(id string) error {
 	if res.RowsAffected == 0 {
 		return ErrDocumentNotFound
 	}
+
 	return nil
 }
