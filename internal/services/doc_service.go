@@ -64,17 +64,20 @@ type documentService struct {
 	repo         repositories.DocumentRepository
 	categoryRepo repositories.Doc_CategoryRepository
 	fileStore    storage.ObjectStorage
+	ragService   RAGService
 }
 
 func NewDocumentService(
 	repo repositories.DocumentRepository,
 	categoryRepo repositories.Doc_CategoryRepository,
 	fileStore storage.ObjectStorage,
+	ragService RAGService,
 ) DocumentService {
 	return &documentService{
 		repo:         repo,
 		categoryRepo: categoryRepo,
 		fileStore:    fileStore,
+		ragService:   ragService,
 	}
 }
 
@@ -117,6 +120,7 @@ func (s *documentService) CreateDocument(ctx context.Context, input CreateDocume
 	}
 
 	document.Category = *category
+	s.scheduleRAGIndexing(ctx, document)
 	dto := mapDocument(document)
 	return &dto, nil
 }
@@ -194,13 +198,15 @@ func (s *documentService) UpdateDocument(ctx context.Context, id string, input U
 	if input.File != nil && oldObjectKey != "" && oldObjectKey != document.FileURL {
 		_ = s.fileStore.Delete(ctx, oldObjectKey)
 	}
+	if input.File != nil {
+		s.scheduleRAGIndexing(ctx, document)
+	}
 
 	dto := mapDocument(document)
 	return &dto, nil
 }
 
 func (s *documentService) DeleteDocument(ctx context.Context, id string) error {
-	_ = ctx
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return ErrDocumentInvalidInput
@@ -211,6 +217,9 @@ func (s *documentService) DeleteDocument(ctx context.Context, id string) error {
 			return ErrDocumentNotFound
 		}
 		return err
+	}
+	if s.ragService != nil {
+		_ = s.ragService.RemoveDocument(ctx, id)
 	}
 	return nil
 }
@@ -329,4 +338,14 @@ func randomID() string {
 		return time.Now().UTC().Format("20060102150405")
 	}
 	return hex.EncodeToString(bytes)
+}
+
+func (s *documentService) scheduleRAGIndexing(ctx context.Context, document *doccategory.Document) {
+	if s.ragService == nil {
+		return
+	}
+	clone := *document
+	go func() {
+		_ = s.ragService.IndexDocument(ctx, &clone)
+	}()
 }

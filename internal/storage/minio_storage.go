@@ -16,6 +16,7 @@ type ObjectStorage interface {
 	Upload(ctx context.Context, objectKey string, file io.Reader, size int64, contentType string) error
 	Delete(ctx context.Context, objectKey string) error
 	PresignedGetURL(ctx context.Context, objectKey string, expiry time.Duration) (string, error)
+	Download(ctx context.Context, objectKey string) (io.ReadCloser, error)
 }
 
 type minioStorage struct {
@@ -62,6 +63,7 @@ func NewMinIOStorage() (ObjectStorage, error) {
 }
 
 func (s *minioStorage) Upload(ctx context.Context, objectKey string, file io.Reader, size int64, contentType string) error {
+
 	_, err := s.client.PutObject(ctx, s.bucket, objectKey, file, size, minio.PutObjectOptions{
 		ContentType: contentType,
 	})
@@ -78,6 +80,10 @@ func (s *minioStorage) PresignedGetURL(ctx context.Context, objectKey string, ex
 		return "", err
 	}
 	return presignedURL.String(), nil
+}
+
+func (s *minioStorage) Download(ctx context.Context, objectKey string) (io.ReadCloser, error) {
+	return s.client.GetObject(ctx, s.bucket, objectKey, minio.GetObjectOptions{})
 }
 
 func (s *minioStorage) ensureBucket(ctx context.Context) error {

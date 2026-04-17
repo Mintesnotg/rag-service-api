@@ -48,6 +48,7 @@ func main() {
 	permissionRepo := repositories.NewPermissionRepository(conn)
 	docCategoryRepo := repositories.NewDocCategoryRepository(conn)
 	documentRepo := repositories.NewDocumentRepository(conn)
+	ragChunkRepo := repositories.NewRAGChunkRepository(conn)
 
 	minioStorage, err := storage.NewMinIOStorage()
 	if err != nil {
@@ -58,13 +59,26 @@ func main() {
 	roleService := services.NewRoleService(roleRepo)
 	permissionService := services.NewPermissionService(permissionRepo)
 	docCategoryService := services.NewDocCategoryService(docCategoryRepo)
-	documentService := services.NewDocumentService(documentRepo, docCategoryRepo, minioStorage)
+	chunker := services.NewSimpleChunker(1200, 150)
+	extractorChain := services.NewExtractorChain(
+		services.NewPDFExtractor(),
+		services.NewDOCXExtractor(),
+		services.NewPlainTextExtractor(),
+	)
+	var ragService services.RAGService
+	if embedder, llm, err := services.NewGeminiClient(); err != nil {
+		log.Printf("rag disabled: %v", err)
+	} else {
+		ragService = services.NewRAGService(documentRepo, ragChunkRepo, minioStorage, chunker, extractorChain, embedder, llm)
+	}
+	documentService := services.NewDocumentService(documentRepo, docCategoryRepo, minioStorage, ragService)
 
 	authHandler := handlers.NewAuthHandler(authService)
 	roleHandler := handlers.NewRoleHandler(roleService)
 	permissionHandler := handlers.NewPermissionHandler(permissionService)
 	docCategoryHandler := handlers.NewDocCategoryHandler(docCategoryService)
 	documentHandler := handlers.NewDocumentHandler(documentService)
+	ragHandler := handlers.NewRAGHandler(ragService)
 
 	permissionHydrator := middleware.PermissionsMiddleware(permissionService)
 	headerPermissionCheck := middleware.RequireHeaderPermission()
@@ -74,6 +88,9 @@ func main() {
 	routes.RegisterRoleRoutes(router, roleHandler, permissionHydrator, headerPermissionCheck)
 	routes.RegisterDocCategoryRoutes(router, docCategoryHandler, permissionHydrator)
 	routes.RegisterDocumentRoutes(router, documentHandler, permissionHydrator, headerPermissionCheck)
+	if ragService != nil {
+		routes.RegisterRAGRoutes(router, ragHandler, permissionHydrator, headerPermissionCheck)
+	}
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

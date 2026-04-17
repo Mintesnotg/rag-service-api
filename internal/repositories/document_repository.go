@@ -20,6 +20,7 @@ type DocumentRepository interface {
 	FindByID(id string) (*doccategory.Document, error)
 	ListByCategory(categoryName string) ([]doccategory.Document, error)
 	Update(document *doccategory.Document) error
+	UpdateProcessingStatus(id string, status enums.ProcessingStatus) error
 	SoftDelete(id string) error
 }
 
@@ -110,5 +111,19 @@ func (r *documentRepository) SoftDelete(id string) error {
 		return ErrDocumentNotFound
 	}
 
+	return nil
+}
+
+func (r *documentRepository) UpdateProcessingStatus(id string, status enums.ProcessingStatus) error {
+	if r.db == nil {
+		return ErrDocumentNilDB
+	}
+	res := r.db.Model(&doccategory.Document{}).Where("id = ?", id).Update("processing_status", status)
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return ErrDocumentNotFound
+	}
 	return nil
 }
