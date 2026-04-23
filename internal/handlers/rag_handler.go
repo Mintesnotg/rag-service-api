@@ -13,7 +13,7 @@ type RAGHandler struct {
 	ragService services.RAGService
 }
 
-type ragQueryRequest struct {
+type RAGQueryRequest struct {
 	Question string `json:"question" binding:"required"`
 	Category string `json:"category"`
 	TopK     int    `json:"top_k"`
@@ -23,8 +23,31 @@ func NewRAGHandler(ragService services.RAGService) *RAGHandler {
 	return &RAGHandler{ragService: ragService}
 }
 
+// Query godoc
+// @Summary Query indexed documents with RAG
+// @Description Returns an answer and supporting contexts from indexed documents.
+// @Tags RAG
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param X-Permission header string true "Permission claim" default(document.manage)
+// @Param data body RAGQueryRequest true "RAG query payload"
+// @Success 200 {object} services.QueryResponse
+// @Failure 400 {object} map[string]string
+// @Failure 401 {object} map[string]string
+// @Failure 403 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Failure 503 {object} map[string]string
+// @Router /api/rag/query [post]
 func (h *RAGHandler) Query(c *gin.Context) {
-	var req ragQueryRequest
+	if h.ragService == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "rag service is not configured on this environment",
+		})
+		return
+	}
+
+	var req RAGQueryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid rag query"})
 		return

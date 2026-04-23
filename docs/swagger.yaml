@@ -61,6 +61,17 @@ definitions:
     required:
     - role_ids
     type: object
+  handlers.RAGQueryRequest:
+    properties:
+      category:
+        type: string
+      question:
+        type: string
+      top_k:
+        type: integer
+    required:
+    - question
+    type: object
   handlers.RegisterRequest:
     properties:
       email:
@@ -136,6 +147,19 @@ definitions:
         type: boolean
       name:
         type: string
+    type: object
+  services.QueryResponse:
+    properties:
+      answer:
+        type: string
+      contexts:
+        items:
+          type: string
+        type: array
+      sources:
+        items:
+          type: string
+        type: array
     type: object
   services.RoleDTO:
     properties:
@@ -814,6 +838,66 @@ paths:
       summary: Get permissions for the given role IDs
       tags:
       - Permissions
+  /api/rag/query:
+    post:
+      consumes:
+      - application/json
+      description: Returns an answer and supporting contexts from indexed documents.
+      parameters:
+      - default: document.manage
+        description: Permission claim
+        in: header
+        name: X-Permission
+        required: true
+        type: string
+      - description: RAG query payload
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.RAGQueryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/services.QueryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Query indexed documents with RAG
+      tags:
+      - RAG
   /api/roles:
     get:
       parameters:
