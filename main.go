@@ -7,6 +7,7 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
+	"go-api/internal/config"
 	"go-api/internal/db"
 	"go-api/internal/handlers"
 	"go-api/internal/middleware"
@@ -26,6 +27,10 @@ import (
 // @in header
 // @name Authorization
 func main() {
+	if err := config.LoadDotEnv(".env"); err != nil {
+		log.Fatalf("env initialization failed: %v", err)
+	}
+
 	conn, err := db.ConnectDB()
 	if err != nil {
 		log.Fatalf("database connection failed: %v", err)
