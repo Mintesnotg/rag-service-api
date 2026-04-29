@@ -3,7 +3,7 @@ package handlers
 import (
 	"net/http"
 	"time"
-
+	"strconv"
 	"go-api/internal/enums"
 	"go-api/internal/services"
 
@@ -107,7 +107,13 @@ func (h *DocCategoryHandler) CreateDocCategory(c *gin.Context) {
 // @Failure 500 {object} map[string]string
 // @Router /api/doc-categories [get]
 func (h *DocCategoryHandler) GetAllDocCategories(c *gin.Context) {
-	categories, err := h.service.GetAllDocCategory()
+	
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+	search := c.Query("search")
+
+
+	categories, err := h.service.GetAllDocCategory(search,page,pageSize)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not fetch document categories"})
 		return

@@ -7,12 +7,14 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
+	"go-api/internal/config"
 	"go-api/internal/db"
 	"go-api/internal/handlers"
 	"go-api/internal/middleware"
 	"go-api/internal/repositories"
 	"go-api/internal/routes"
 	"go-api/internal/services"
+	"go-api/internal/storage"
 
 	_ "go-api/docs"
 )
@@ -25,6 +27,10 @@ import (
 // @in header
 // @name Authorization
 func main() {
+	if err := config.LoadDotEnv(".env"); err != nil {
+		log.Fatalf("env initialization failed: %v", err)
+	}
+
 	conn, err := db.ConnectDB()
 	if err != nil {
 		log.Fatalf("database connection failed: %v", err)
@@ -46,16 +52,38 @@ func main() {
 	roleRepo := repositories.NewRoleRepository(conn)
 	permissionRepo := repositories.NewPermissionRepository(conn)
 	docCategoryRepo := repositories.NewDocCategoryRepository(conn)
+	documentRepo := repositories.NewDocumentRepository(conn)
+	ragChunkRepo := repositories.NewRAGChunkRepository(conn)
+
+	minioStorage, err := storage.NewMinIOStorage()
+	if err != nil {
+		log.Fatalf("minio initialization failed: %v", err)
+	}
 
 	authService := services.NewAuthService(userRepo)
 	roleService := services.NewRoleService(roleRepo)
 	permissionService := services.NewPermissionService(permissionRepo)
 	docCategoryService := services.NewDocCategoryService(docCategoryRepo)
+	chunker := services.NewSimpleChunker(1200, 150)
+	extractorChain := services.NewExtractorChain(
+		services.NewPDFExtractor(),
+		services.NewDOCXExtractor(),
+		services.NewPlainTextExtractor(),
+	)
+	var ragService services.RAGService
+	if embedder, llm, err := services.NewGeminiClient(); err != nil {
+		log.Printf("rag disabled: %v", err)
+	} else {
+		ragService = services.NewRAGService(documentRepo, ragChunkRepo, minioStorage, chunker, extractorChain, embedder, llm)
+	}
+	documentService := services.NewDocumentService(documentRepo, docCategoryRepo, minioStorage, ragService)
 
 	authHandler := handlers.NewAuthHandler(authService)
 	roleHandler := handlers.NewRoleHandler(roleService)
 	permissionHandler := handlers.NewPermissionHandler(permissionService)
 	docCategoryHandler := handlers.NewDocCategoryHandler(docCategoryService)
+	documentHandler := handlers.NewDocumentHandler(documentService)
+	ragHandler := handlers.NewRAGHandler(ragService)
 
 	permissionHydrator := middleware.PermissionsMiddleware(permissionService)
 	headerPermissionCheck := middleware.RequireHeaderPermission()
@@ -64,9 +92,8 @@ func main() {
 	routes.RegisterPermissionRoutes(router, permissionHandler, permissionHydrator, headerPermissionCheck)
 	routes.RegisterRoleRoutes(router, roleHandler, permissionHydrator, headerPermissionCheck)
 	routes.RegisterDocCategoryRoutes(router, docCategoryHandler, permissionHydrator)
-
-	protected := router.Group("/api")
-	protected.Use(middleware.AuthMiddleware(), permissionHydrator)
+	routes.RegisterDocumentRoutes(router, documentHandler, permissionHydrator, headerPermissionCheck)
+	routes.RegisterRAGRoutes(router, ragHandler, permissionHydrator, headerPermissionCheck)
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

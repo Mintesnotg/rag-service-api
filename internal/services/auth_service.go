@@ -36,7 +36,7 @@ func (s *authService) Register(email, password string) (*models.User, error) {
 
 	if _, err := s.userRepo.FindByEmail(email); err == nil {
 		return nil, ErrEmailInUse
-	} else if err != nil && err != repositories.ErrNotFound {
+	} else if err != repositories.ErrNotFound {
 		return nil, err
 	}
 

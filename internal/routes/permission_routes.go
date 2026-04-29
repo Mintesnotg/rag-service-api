@@ -19,8 +19,8 @@ func RegisterPermissionRoutes(router *gin.Engine, handler *handlers.PermissionHa
 
 	group.GET("", handler.ListPermissions)
 	group.POST("", handler.CreatePermission)
-	group.PUT(":id", handler.UpdatePermission)
-	group.DELETE(":id", handler.DeletePermission)
+	group.PUT("/:id", handler.UpdatePermission)
+	group.DELETE("/:id", handler.DeletePermission)
 
 	// Resolve permissions for role IDs
 	group.POST("/resolve", handler.ResolvePermissions)

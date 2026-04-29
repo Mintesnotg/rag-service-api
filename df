@@ -1,0 +1,131 @@
+[33mcommit 9f8bede4032ec0eaab53e6b62e48c701a752f1cb[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mbug_fix[m[33m, [m[1;31morigin/bug_fix[m[33m)[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Thu Apr 23 20:31:49 2026 +0300
+
+    post-rag-api
+
+[33mcommit dd0ddfe0db50c07aa9f58cb0b9d14296a2f061ac[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Mon Apr 20 17:14:17 2026 +0300
+
+    fixing-vector-db
+
+[33mcommit 947f42035c3a0ac198ea8a24405aaa0d026c2616[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Fri Apr 17 22:10:55 2026 +0300
+
+    rag
+
+[33mcommit 22d067cf201440203c955df512b9595f2ba95236[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Thu Apr 16 16:38:03 2026 +0300
+
+    document-apis
+
+[33mcommit 686659914855108b2e31c4b32cf64d0c0340f72b[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Tue Apr 14 16:57:18 2026 +0300
+
+    doc-category-fixes
+
+[33mcommit bab863f61c0344fa039336d138bafa971566e569[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Mon Apr 13 16:55:40 2026 +0300
+
+    role_handeler.go
+
+[33mcommit d888aa6a3b004e4e2ebe30f204b8572dae63f675[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Wed Apr 8 14:33:17 2026 +0300
+
+    permission-service
+
+[33mcommit f597e92c5409a3d09d245266a54a9742817dd0b6[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Tue Apr 7 10:48:54 2026 +0300
+
+    doc-category_service-
+
+[33mcommit f7e6c9bf786e548503451a65e971f52cce129f9d[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Tue Apr 7 09:17:35 2026 +0300
+
+    add-git-ignore
+
+[33mcommit 3ab936f104d3c615073f983a833defea62d2904c[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Mon Apr 6 14:54:19 2026 +0300
+
+    doc_table-design
+
+[33mcommit 99d7c84128ba8831a718ea4afe863385e2fbbfbb[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Mon Apr 6 11:00:51 2026 +0300
+
+    api-routing-issue-fix
+
+[33mcommit 4f775a6926f2147db09cfae2f868256192427ecf[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Fri Apr 3 13:26:56 2026 +0300
+
+    swagger-doc-bug-fix
+
+[33mcommit 4c464688a76678e919d9d7a7fb5cef225647c6d9[m[33m ([m[1;32mmain[m[33m)[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Fri Apr 3 11:51:00 2026 +0300
+
+    permission-endpoint
+
+[33mcommit bd869f2453d5fa9c2bd06b75ca182aa77b2ec50c[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Thu Apr 2 15:06:30 2026 +0300
+
+    cors-issue-fix
+
+[33mcommit 66408ddb0c294cabd363b7c64e7f8fe6943c88c1[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Thu Apr 2 12:34:22 2026 +0300
+
+    fix-swagger-issue
+
+[33mcommit e2955e3a362882ae2cf67a4c567868d846728c08[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Thu Apr 2 11:52:55 2026 +0300
+
+    configuring-swagger
+
+[33mcommit 854a39759269763df3276110b21a08358a39bc90[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Wed Apr 1 17:03:12 2026 +0300
+
+    aut-api
+
+[33mcommit 188b9cd5db2c5d672443b05e3f6b0d3aa69a911f[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Wed Apr 1 12:39:17 2026 +0300
+
+    database-migration and seeding
+
+[33mcommit 4dd73aacd23e3f28fce18d1e60ac380b6a7909c9[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Wed Apr 1 10:55:38 2026 +0300
+
+    model-design
+
+[33mcommit 0dfaf0f0caf4ac2f6990ee80191bce5dcbe4e270[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Wed Apr 1 09:02:17 2026 +0300
+
+    add_file-name
+
+[33mcommit cb36b40a3b6189f7ed88b4a021ddcd3154d8d427[m
+Author: Mintesnot Girma <MintesnotGi@ethiopianairlines.com>
+Date:   Wed Apr 1 08:50:35 2026 +0300
+
+    Initial project setup (Go Gin API)
+
+[33mcommit 8c752c6a36f05cf0cb30d8e9436c1742149c361e[m
+Author: Mintesnot Girma <47204283+Mintesnotg@users.noreply.github.com>
+Date:   Wed Apr 1 08:53:22 2026 +0300
+
+    Initial commit
