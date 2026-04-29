@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -224,6 +225,7 @@ func normalizeExtractedText(text string) string {
 type geminiClient struct {
 	apiKey      string
 	embedModel  string
+	embedDim    int
 	chatModel   string
 	httpClient  *http.Client
 	embedAPIURL string
@@ -238,16 +240,28 @@ func NewGeminiClient() (Embedder, LLM, error) {
 
 	embedModel := strings.TrimSpace(os.Getenv("GEMINI_EMBED_MODEL"))
 	if embedModel == "" {
-		embedModel = "text-embedding-004"
+		embedModel = "gemini-embedding-001"
 	}
+	embedModel = canonicalModelName(embedModel)
+
+	embedDim := 768
+	if rawDim := strings.TrimSpace(os.Getenv("GEMINI_EMBED_DIM")); rawDim != "" {
+		parsed, parseErr := strconv.Atoi(rawDim)
+		if parseErr == nil && parsed > 0 {
+			embedDim = parsed
+		}
+	}
+
 	chatModel := strings.TrimSpace(os.Getenv("GEMINI_CHAT_MODEL"))
 	if chatModel == "" {
 		chatModel = "gemini-1.5-flash"
 	}
+	chatModel = canonicalModelName(chatModel)
 
 	client := &geminiClient{
 		apiKey:      apiKey,
 		embedModel:  embedModel,
+		embedDim:    embedDim,
 		chatModel:   chatModel,
 		httpClient:  &http.Client{Timeout: 40 * time.Second},
 		embedAPIURL: "https://generativelanguage.googleapis.com/v1beta/models/%s:embedContent?key=%s",
@@ -262,6 +276,9 @@ func (g *geminiClient) Embed(ctx context.Context, text string) ([]float64, error
 		"content": map[string]interface{}{
 			"parts": []map[string]string{{"text": text}},
 		},
+	}
+	if g.embedDim > 0 {
+		reqBody["outputDimensionality"] = g.embedDim
 	}
 	rawBody, _ := json.Marshal(reqBody)
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf(g.embedAPIURL, g.embedModel, g.apiKey), bytes.NewReader(rawBody))
@@ -338,4 +355,10 @@ func (g *geminiClient) GenerateAnswer(ctx context.Context, question string, cont
 		return "", errors.New("empty answer from gemini")
 	}
 	return parsed.Candidates[0].Content.Parts[0].Text, nil
+}
+
+func canonicalModelName(model string) string {
+	model = strings.TrimSpace(model)
+	model = strings.TrimPrefix(model, "models/")
+	return strings.TrimSpace(model)
 }
