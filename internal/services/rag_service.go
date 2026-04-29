@@ -4,15 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
-	"path/filepath"
-	"strings"
-
 	"go-api/internal/enums"
 	docmodels "go-api/internal/models/doc-category"
 	ragmodels "go-api/internal/models/rag"
 	"go-api/internal/repositories"
 	"go-api/internal/storage"
+	"io"
+	"log"
+	"path/filepath"
+	"strings"
 )
 
 var ErrRAGInvalidInput = errors.New("invalid rag input")
@@ -70,6 +70,7 @@ func NewRAGService(
 
 func (s *ragService) IndexDocument(ctx context.Context, document *docmodels.Document) error {
 	if document == nil || strings.TrimSpace(document.ID) == "" || strings.TrimSpace(document.FileURL) == "" {
+		log.Printf("rag: invalid index document input: %+v", document)
 		return ErrRAGInvalidInput
 	}
 
@@ -77,13 +78,16 @@ func (s *ragService) IndexDocument(ctx context.Context, document *docmodels.Docu
 	reader, err := s.fileStore.Download(ctx, document.FileURL)
 	if err != nil {
 		_ = s.documentRepo.UpdateProcessingStatus(document.ID, enums.ProcessingFailed)
+		log.Printf("rag: failed to download document file document_id=%s file_url=%s err=%v", document.ID, document.FileURL, err)
 		return err
+
 	}
 	defer reader.Close()
 
 	contentBytes, err := io.ReadAll(io.LimitReader(reader, 10*1024*1024))
 	if err != nil {
 		_ = s.documentRepo.UpdateProcessingStatus(document.ID, enums.ProcessingFailed)
+		log.Printf("rag: failed to read document bytes document_id=%s err=%v", document.ID, err)
 		return err
 	}
 
@@ -95,11 +99,14 @@ func (s *ragService) IndexDocument(ctx context.Context, document *docmodels.Docu
 	)
 	if err != nil {
 		_ = s.documentRepo.UpdateProcessingStatus(document.ID, enums.ProcessingFailed)
+		log.Printf("rag: failed to extract text document_id=%s err=%v", document.ID, err)
 		return err
 	}
 	content = strings.TrimSpace(content)
 	if content == "" {
 		_ = s.documentRepo.UpdateProcessingStatus(document.ID, enums.ProcessingFailed)
+		log.Println("the error is " + content)
+
 		return errors.New("document has no text content")
 	}
 
@@ -110,6 +117,8 @@ func (s *ragService) IndexDocument(ctx context.Context, document *docmodels.Docu
 		vector, embedErr := s.embedder.Embed(ctx, chunk)
 		if embedErr != nil {
 			_ = s.documentRepo.UpdateProcessingStatus(document.ID, enums.ProcessingFailed)
+
+			log.Printf("rag: embedding failed document_id=%s chunk_index=%d err=%v", document.ID, i, embedErr)
 			return embedErr
 		}
 		metadata, _ := json.Marshal(map[string]interface{}{
@@ -128,6 +137,7 @@ func (s *ragService) IndexDocument(ctx context.Context, document *docmodels.Docu
 
 	if err := s.ragRepo.ReplaceDocumentChunks(document.ID, chunks, embeddings); err != nil {
 		_ = s.documentRepo.UpdateProcessingStatus(document.ID, enums.ProcessingFailed)
+		log.Printf("rag: failed to replace document chunks document_id=%s err=%v", document.ID, err)
 		return err
 	}
 	_ = s.documentRepo.UpdateProcessingStatus(document.ID, enums.ProcessingCompleted)

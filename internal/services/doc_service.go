@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"log"
 	"mime/multipart"
 	"path/filepath"
 	"strings"
@@ -344,8 +345,19 @@ func (s *documentService) scheduleRAGIndexing(ctx context.Context, document *doc
 	if s.ragService == nil {
 		return
 	}
+
+	indexCtx := context.Background()
+	if ctx != nil {
+		// Keep request values but detach cancellation so indexing can finish after upload response.
+		indexCtx = context.WithoutCancel(ctx)
+	}
+	indexCtx, cancel := context.WithTimeout(indexCtx, 10*time.Minute)
+
 	clone := *document
 	go func() {
-		_ = s.ragService.IndexDocument(ctx, &clone)
+		defer cancel()
+		if err := s.ragService.IndexDocument(indexCtx, &clone); err != nil {
+			log.Printf("rag: indexing failed document_id=%s err=%v", clone.ID, err)
+		}
 	}()
 }
