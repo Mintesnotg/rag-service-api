@@ -74,10 +74,10 @@ func (s *ragService) IndexDocument(ctx context.Context, document *docmodels.Docu
 		return ErrRAGInvalidInput
 	}
 
-	_ = s.documentRepo.UpdateProcessingStatus(document.ID, enums.ProcessingRunning)
+	s.updateProcessingStatus(document.ID, enums.ProcessingRunning)
 	reader, err := s.fileStore.Download(ctx, document.FileURL)
 	if err != nil {
-		_ = s.documentRepo.UpdateProcessingStatus(document.ID, enums.ProcessingFailed)
+		s.updateProcessingStatus(document.ID, enums.ProcessingFailed)
 		log.Printf("rag: failed to download document file document_id=%s file_url=%s err=%v", document.ID, document.FileURL, err)
 		return err
 
@@ -86,8 +86,12 @@ func (s *ragService) IndexDocument(ctx context.Context, document *docmodels.Docu
 
 	contentBytes, err := io.ReadAll(io.LimitReader(reader, 10*1024*1024))
 	if err != nil {
-		_ = s.documentRepo.UpdateProcessingStatus(document.ID, enums.ProcessingFailed)
-		log.Printf("rag: failed to read document bytes document_id=%s err=%v", document.ID, err)
+		s.updateProcessingStatus(document.ID, enums.ProcessingFailed)
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			log.Printf("rag: indexing canceled while reading document bytes document_id=%s err=%v", document.ID, err)
+		} else {
+			log.Printf("rag: failed to read document bytes document_id=%s err=%v", document.ID, err)
+		}
 		return err
 	}
 
@@ -98,15 +102,14 @@ func (s *ragService) IndexDocument(ctx context.Context, document *docmodels.Docu
 		contentBytes,
 	)
 	if err != nil {
-		_ = s.documentRepo.UpdateProcessingStatus(document.ID, enums.ProcessingFailed)
+		s.updateProcessingStatus(document.ID, enums.ProcessingFailed)
 		log.Printf("rag: failed to extract text document_id=%s err=%v", document.ID, err)
 		return err
 	}
 	content = strings.TrimSpace(content)
 	if content == "" {
-		_ = s.documentRepo.UpdateProcessingStatus(document.ID, enums.ProcessingFailed)
-		log.Println("the error is " + content)
-
+		s.updateProcessingStatus(document.ID, enums.ProcessingFailed)
+		log.Printf("rag: extracted empty text document_id=%s", document.ID)
 		return errors.New("document has no text content")
 	}
 
@@ -116,16 +119,18 @@ func (s *ragService) IndexDocument(ctx context.Context, document *docmodels.Docu
 	for i, chunk := range chunksText {
 		vector, embedErr := s.embedder.Embed(ctx, chunk)
 		if embedErr != nil {
-			_ = s.documentRepo.UpdateProcessingStatus(document.ID, enums.ProcessingFailed)
-
+			s.updateProcessingStatus(document.ID, enums.ProcessingFailed)
 			log.Printf("rag: embedding failed document_id=%s chunk_index=%d err=%v", document.ID, i, embedErr)
 			return embedErr
 		}
-		metadata, _ := json.Marshal(map[string]interface{}{
+		metadata, metadataErr := json.Marshal(map[string]interface{}{
 			"doc_name":      document.DocName,
 			"category_id":   document.CategoryID,
 			"category_name": document.Category.Name,
 		})
+		if metadataErr != nil {
+			log.Printf("rag: failed to marshal chunk metadata document_id=%s chunk_index=%d err=%v", document.ID, i, metadataErr)
+		}
 		chunks = append(chunks, ragmodels.Chunk{
 			DocumentID: document.ID,
 			ChunkIndex: i,
@@ -136,11 +141,11 @@ func (s *ragService) IndexDocument(ctx context.Context, document *docmodels.Docu
 	}
 
 	if err := s.ragRepo.ReplaceDocumentChunks(document.ID, chunks, embeddings); err != nil {
-		_ = s.documentRepo.UpdateProcessingStatus(document.ID, enums.ProcessingFailed)
+		s.updateProcessingStatus(document.ID, enums.ProcessingFailed)
 		log.Printf("rag: failed to replace document chunks document_id=%s err=%v", document.ID, err)
 		return err
 	}
-	_ = s.documentRepo.UpdateProcessingStatus(document.ID, enums.ProcessingCompleted)
+	s.updateProcessingStatus(document.ID, enums.ProcessingCompleted)
 	return nil
 }
 
@@ -152,6 +157,7 @@ func (s *ragService) RemoveDocument(ctx context.Context, documentID string) erro
 func (s *ragService) Query(ctx context.Context, input QueryInput) (*QueryResponse, error) {
 	question := strings.TrimSpace(input.Question)
 	if question == "" {
+		log.Printf("rag: query rejected because question is empty")
 		return nil, ErrRAGInvalidInput
 	}
 	if input.TopK <= 0 {
@@ -160,10 +166,12 @@ func (s *ragService) Query(ctx context.Context, input QueryInput) (*QueryRespons
 
 	queryEmbedding, err := s.embedder.Embed(ctx, question)
 	if err != nil {
+		log.Printf("rag: failed to embed query question=%q err=%v", question, err)
 		return nil, err
 	}
 	results, err := s.ragRepo.SearchSimilar(queryEmbedding, input.TopK, strings.TrimSpace(input.Category))
 	if err != nil {
+		log.Printf("rag: failed to search similar chunks question=%q category=%q top_k=%d err=%v", question, input.Category, input.TopK, err)
 		return nil, err
 	}
 
@@ -176,6 +184,7 @@ func (s *ragService) Query(ctx context.Context, input QueryInput) (*QueryRespons
 
 	answer, err := s.llm.GenerateAnswer(ctx, question, contexts)
 	if err != nil {
+		log.Printf("rag: failed to generate answer question=%q contexts=%d err=%v", question, len(contexts), err)
 		return nil, err
 	}
 
@@ -188,4 +197,10 @@ func (s *ragService) Query(ctx context.Context, input QueryInput) (*QueryRespons
 		Sources:  sources,
 		Contexts: contexts,
 	}, nil
+}
+
+func (s *ragService) updateProcessingStatus(documentID string, status enums.ProcessingStatus) {
+	if err := s.documentRepo.UpdateProcessingStatus(documentID, status); err != nil {
+		log.Printf("rag: failed to update processing status document_id=%s status=%s err=%v", documentID, status, err)
+	}
 }
