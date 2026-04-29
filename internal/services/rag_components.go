@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -223,13 +224,14 @@ func normalizeExtractedText(text string) string {
 }
 
 type geminiClient struct {
-	apiKey      string
-	embedModel  string
-	embedDim    int
-	chatModel   string
-	httpClient  *http.Client
-	embedAPIURL string
-	chatAPIURL  string
+	apiKey             string
+	embedModel         string
+	embedDim           int
+	chatModel          string
+	chatFallbackModels []string
+	httpClient         *http.Client
+	embedAPIURL        string
+	chatAPIURL         string
 }
 
 func NewGeminiClient() (Embedder, LLM, error) {
@@ -254,18 +256,24 @@ func NewGeminiClient() (Embedder, LLM, error) {
 
 	chatModel := strings.TrimSpace(os.Getenv("GEMINI_CHAT_MODEL"))
 	if chatModel == "" {
-		chatModel = "gemini-1.5-flash"
+		chatModel = "gemini-2.5-flash"
 	}
 	chatModel = canonicalModelName(chatModel)
+	chatFallbacks := parseModelList(strings.TrimSpace(os.Getenv("GEMINI_CHAT_FALLBACK_MODELS")))
+	if len(chatFallbacks) == 0 {
+		chatFallbacks = []string{"gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash"}
+	}
+	chatFallbacks = removeModel(chatFallbacks, chatModel)
 
 	client := &geminiClient{
-		apiKey:      apiKey,
-		embedModel:  embedModel,
-		embedDim:    embedDim,
-		chatModel:   chatModel,
-		httpClient:  &http.Client{Timeout: 40 * time.Second},
-		embedAPIURL: "https://generativelanguage.googleapis.com/v1beta/models/%s:embedContent?key=%s",
-		chatAPIURL:  "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
+		apiKey:             apiKey,
+		embedModel:         embedModel,
+		embedDim:           embedDim,
+		chatModel:          chatModel,
+		chatFallbackModels: chatFallbacks,
+		httpClient:         &http.Client{Timeout: 40 * time.Second},
+		embedAPIURL:        "https://generativelanguage.googleapis.com/v1beta/models/%s:embedContent?key=%s",
+		chatAPIURL:         "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
 	}
 	return client, client, nil
 }
@@ -316,6 +324,33 @@ func (g *geminiClient) GenerateAnswer(ctx context.Context, question string, cont
 		strings.Join(contexts, "\n---\n") +
 		"\n\nQuestion: " + question
 
+	models := append([]string{g.chatModel}, g.chatFallbackModels...)
+	var lastErr error
+	for _, model := range models {
+		answer, notFound, err := g.generateAnswerWithModel(ctx, model, prompt)
+		if err == nil {
+			if model != g.chatModel {
+				log.Printf("rag: switched Gemini chat model from %q to fallback %q", g.chatModel, model)
+			}
+			return answer, nil
+		}
+
+		if !notFound {
+			return "", err
+		}
+
+		lastErr = err
+		log.Printf("rag: Gemini chat model unavailable model=%q err=%v", model, err)
+	}
+
+	if lastErr != nil {
+		return "", lastErr
+	}
+
+	return "", errors.New("no available gemini chat model for generateContent")
+}
+
+func (g *geminiClient) generateAnswerWithModel(ctx context.Context, model, prompt string) (string, bool, error) {
 	reqBody := map[string]interface{}{
 		"contents": []map[string]interface{}{
 			{
@@ -323,20 +358,21 @@ func (g *geminiClient) GenerateAnswer(ctx context.Context, question string, cont
 			},
 		},
 	}
+
 	rawBody, _ := json.Marshal(reqBody)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf(g.chatAPIURL, g.chatModel, g.apiKey), bytes.NewReader(rawBody))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fmt.Sprintf(g.chatAPIURL, model, g.apiKey), bytes.NewReader(rawBody))
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := g.httpClient.Do(req)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode >= 300 {
-		return "", fmt.Errorf("gemini chat failed: %s", string(body))
+		return "", isModelNotFoundError(resp.StatusCode, body), fmt.Errorf("gemini chat failed: %s", string(body))
 	}
 
 	var parsed struct {
@@ -349,16 +385,56 @@ func (g *geminiClient) GenerateAnswer(ctx context.Context, question string, cont
 		} `json:"candidates"`
 	}
 	if err := json.Unmarshal(body, &parsed); err != nil {
-		return "", err
+		return "", false, err
 	}
 	if len(parsed.Candidates) == 0 || len(parsed.Candidates[0].Content.Parts) == 0 {
-		return "", errors.New("empty answer from gemini")
+		return "", false, errors.New("empty answer from gemini")
 	}
-	return parsed.Candidates[0].Content.Parts[0].Text, nil
+	return parsed.Candidates[0].Content.Parts[0].Text, false, nil
 }
 
 func canonicalModelName(model string) string {
 	model = strings.TrimSpace(model)
 	model = strings.TrimPrefix(model, "models/")
 	return strings.TrimSpace(model)
+}
+
+func parseModelList(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+
+	parts := strings.Split(raw, ",")
+	models := make([]string, 0, len(parts))
+	for _, part := range parts {
+		model := canonicalModelName(part)
+		if model != "" {
+			models = append(models, model)
+		}
+	}
+	return models
+}
+
+func removeModel(models []string, model string) []string {
+	filtered := make([]string, 0, len(models))
+	for _, current := range models {
+		if current == model {
+			continue
+		}
+		filtered = append(filtered, current)
+	}
+	return filtered
+}
+
+func isModelNotFoundError(statusCode int, responseBody []byte) bool {
+	if statusCode != http.StatusNotFound {
+		return false
+	}
+
+	lowered := strings.ToLower(string(responseBody))
+	if strings.Contains(lowered, "is not found for api version") {
+		return true
+	}
+
+	return strings.Contains(lowered, "\"status\": \"not_found\"")
 }
