@@ -70,6 +70,9 @@ func (s *authService) Login(email, password string) (string, []string, error) {
 	if !utils.VerifyPassword(password, user.PasswordHash) {
 		return "", nil, ErrInvalidCredential
 	}
+	if !user.IsActive {
+		return "", nil, ErrInvalidCredential
+	}
 
 	roles, err := s.userRepo.GetRolesByUserID(user.ID)
 	if err != nil {
