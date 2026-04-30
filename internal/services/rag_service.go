@@ -36,13 +36,30 @@ type QueryResponse struct {
 	Contexts []string `json:"contexts"`
 }
 
-const responseFormatGuide = `Response formatting requirements:
-1. Use clear section headings and subheadings where useful.
-2. Use bullet points for unordered details and numbered lists for steps.
-3. Keep wording professional, concise, and user-friendly.
-4. Avoid raw markdown symbols in final text when possible.
-5. Keep a logical flow: introduction, key details, short summary.
-6. Avoid redundancy and keep spacing clean.`
+const responseFormatGuide = `Enhanced Prompt (Structured and user-friendly):
+Generate responses that are well-formatted, structured, and professional. Follow these strict formatting and usability rules.
+
+1. Text formatting rules
+- Convert markdown-style syntax into clean formatted text.
+- "**text**" should be rendered as bold text.
+- Lines starting with "*" should be converted into proper bullet points.
+- Do not display raw symbols like "**" or "*" in the final output.
+
+2. Content structure
+- Organize responses with clear section headings and subheadings.
+- Group related information logically.
+- Maintain proper spacing between sections.
+- Keep paragraphs separated and indentation consistent.
+
+3. Lists and flow
+- Use bullet points for unordered information.
+- Use numbered lists for step-by-step instructions.
+- Keep a smooth logical flow: Introduction -> Details -> Summary (when applicable).
+
+4. Writing style
+- Use professional language.
+- Keep it clear, concise, and easy to understand.
+- Avoid redundancy and unnecessary clutter.`
 
 type ragService struct {
 	documentRepo repositories.DocumentRepository
