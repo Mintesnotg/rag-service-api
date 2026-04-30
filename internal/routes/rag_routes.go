@@ -7,21 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func RegisterRAGRoutes(
-	router *gin.Engine,
-	handler *handlers.RAGHandler,
-	permMiddleware gin.HandlerFunc,
-	headerCheck gin.HandlerFunc,
-) {
+func RegisterRAGRoutes(router *gin.Engine, handler *handlers.RAGHandler) {
 	group := router.Group("/api/rag")
-	group.Use(middleware.AuthMiddleware())
-	if permMiddleware != nil {
-		group.Use(permMiddleware)
-	}
-	group.Use(middleware.RequirePermission("document.manage"))
-	if headerCheck != nil {
-		group.Use(headerCheck)
-	}
-
+	group.Use(middleware.RAGQueryRateLimitMiddleware())
 	group.POST("/query", handler.Query)
 }

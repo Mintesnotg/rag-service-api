@@ -27,15 +27,11 @@ func NewRAGHandler(ragService services.RAGService) *RAGHandler {
 // @Summary Query indexed documents with RAG
 // @Description Returns an answer and supporting contexts from indexed documents.
 // @Tags RAG
-// @Security BearerAuth
 // @Accept json
 // @Produce json
-// @Param X-Permission header string true "Permission claim" default(document.manage)
 // @Param data body RAGQueryRequest true "RAG query payload"
 // @Success 200 {object} services.QueryResponse
 // @Failure 400 {object} map[string]string
-// @Failure 401 {object} map[string]string
-// @Failure 403 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Failure 503 {object} map[string]string
 // @Router /api/rag/query [post]

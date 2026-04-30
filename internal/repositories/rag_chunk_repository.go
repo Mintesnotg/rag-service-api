@@ -42,12 +42,13 @@ func (r *ragChunkRepository) ReplaceDocumentChunks(documentID string, chunks []r
 			break
 		}
 		if err := r.db.Exec(
-			`INSERT INTO rag_chunks (document_id, chunk_index, content, metadata, embedding) VALUES (?, ?, ?, ?::jsonb, ?::vector)`,
+			`INSERT INTO rag_chunks (document_id, chunk_index, content, metadata, embedding, created_at) VALUES (?, ?, ?, ?::jsonb, ?::vector, ?)`,
 			documentID,
 			chunks[i].ChunkIndex,
 			chunks[i].Content,
 			chunks[i].Metadata,
 			vectorLiteral(embeddings[i]),
+			chunks[i].CreatedAt,
 		).Error; err != nil {
 			return err
 		}

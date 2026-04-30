@@ -93,7 +93,7 @@ func main() {
 	routes.RegisterRoleRoutes(router, roleHandler, permissionHydrator, headerPermissionCheck)
 	routes.RegisterDocCategoryRoutes(router, docCategoryHandler, permissionHydrator)
 	routes.RegisterDocumentRoutes(router, documentHandler, permissionHydrator, headerPermissionCheck)
-	routes.RegisterRAGRoutes(router, ragHandler, permissionHydrator, headerPermissionCheck)
+	routes.RegisterRAGRoutes(router, ragHandler)
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
