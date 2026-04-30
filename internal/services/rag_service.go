@@ -13,6 +13,7 @@ import (
 	"log"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 var ErrRAGInvalidInput = errors.New("invalid rag input")
@@ -34,6 +35,14 @@ type QueryResponse struct {
 	Sources  []string `json:"sources"`
 	Contexts []string `json:"contexts"`
 }
+
+const responseFormatGuide = `Response formatting requirements:
+1. Use clear section headings and subheadings where useful.
+2. Use bullet points for unordered details and numbered lists for steps.
+3. Keep wording professional, concise, and user-friendly.
+4. Avoid raw markdown symbols in final text when possible.
+5. Keep a logical flow: introduction, key details, short summary.
+6. Avoid redundancy and keep spacing clean.`
 
 type ragService struct {
 	documentRepo repositories.DocumentRepository
@@ -116,6 +125,7 @@ func (s *ragService) IndexDocument(ctx context.Context, document *docmodels.Docu
 	chunksText := s.chunker.Chunk(content)
 	chunks := make([]ragmodels.Chunk, 0, len(chunksText))
 	embeddings := make([][]float64, 0, len(chunksText))
+	chunkCreatedAt := time.Now().UTC()
 	for i, chunk := range chunksText {
 		vector, embedErr := s.embedder.Embed(ctx, chunk)
 		if embedErr != nil {
@@ -136,6 +146,7 @@ func (s *ragService) IndexDocument(ctx context.Context, document *docmodels.Docu
 			ChunkIndex: i,
 			Content:    chunk,
 			Metadata:   string(metadata),
+			CreatedAt:  chunkCreatedAt,
 		})
 		embeddings = append(embeddings, vector)
 	}
@@ -182,7 +193,8 @@ func (s *ragService) Query(ctx context.Context, input QueryInput) (*QueryRespons
 		sourcesMap[result.DocumentID] = struct{}{}
 	}
 
-	answer, err := s.llm.GenerateAnswer(ctx, question, contexts)
+	answerPrompt := question + "\n\n" + responseFormatGuide
+	answer, err := s.llm.GenerateAnswer(ctx, answerPrompt, contexts)
 	if err != nil {
 		log.Printf("rag: failed to generate answer question=%q contexts=%d err=%v", question, len(contexts), err)
 		return nil, err
