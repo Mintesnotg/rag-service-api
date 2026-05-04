@@ -12,6 +12,7 @@ import (
 	"io"
 	"log"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -36,30 +37,19 @@ type QueryResponse struct {
 	Contexts []string `json:"contexts"`
 }
 
-const responseFormatGuide = `Enhanced Prompt (Structured and user-friendly):
-Generate responses that are well-formatted, structured, and professional. Follow these strict formatting and usability rules.
+const responseFormatGuide = `Return a clean, user-friendly answer.
+Rules:
+1. Never output markdown symbols such as *, **, #, or backticks.
+2. Write in short, clear paragraphs.
+3. For lists, use either numbered lines (1. 2. 3.) or bullet lines (- item).
+4. Make headings and subheadings bold using **text**, and keep them short and clear.
+5. Keep professional tone and avoid unnecessary clutter.`
 
-1. Text formatting rules
-- Convert markdown-style syntax into clean formatted text.
-- "**text**" should be rendered as bold text.
-- Lines starting with "*" should be converted into proper bullet points.
-- Do not display raw symbols like "**" or "*" in the final output.
-
-2. Content structure
-- Organize responses with clear section headings and subheadings.
-- Group related information logically.
-- Maintain proper spacing between sections.
-- Keep paragraphs separated and indentation consistent.
-
-3. Lists and flow
-- Use bullet points for unordered information.
-- Use numbered lists for step-by-step instructions.
-- Keep a smooth logical flow: Introduction -> Details -> Summary (when applicable).
-
-4. Writing style
-- Use professional language.
-- Keep it clear, concise, and easy to understand.
-- Avoid redundancy and unnecessary clutter.`
+var (
+	boldPattern      = regexp.MustCompile(`\*\*(.+?)\*\*`)
+	headerPrefixExpr = regexp.MustCompile(`^#{1,6}\s*`)
+	numberedItemExpr = regexp.MustCompile(`^\d+\.\s+`)
+)
 
 type ragService struct {
 	documentRepo repositories.DocumentRepository
@@ -216,6 +206,7 @@ func (s *ragService) Query(ctx context.Context, input QueryInput) (*QueryRespons
 		log.Printf("rag: failed to generate answer question=%q contexts=%d err=%v", question, len(contexts), err)
 		return nil, err
 	}
+	// answer = formatLLMAnswer(answer)
 
 	sources := make([]string, 0, len(sourcesMap))
 	for id := range sourcesMap {
@@ -232,4 +223,77 @@ func (s *ragService) updateProcessingStatus(documentID string, status enums.Proc
 	if err := s.documentRepo.UpdateProcessingStatus(documentID, status); err != nil {
 		log.Printf("rag: failed to update processing status document_id=%s status=%s err=%v", documentID, status, err)
 	}
+}
+
+func formatLLMAnswer(answer string) string {
+	answer = strings.TrimSpace(strings.ReplaceAll(answer, "\r\n", "\n"))
+	if answer == "" {
+		return ""
+	}
+
+	lines := strings.Split(answer, "\n")
+	out := make([]string, 0, len(lines))
+
+	for _, rawLine := range lines {
+		line := strings.TrimSpace(rawLine)
+		if line == "" {
+			if len(out) > 0 && out[len(out)-1] != "" {
+				out = append(out, "")
+			}
+			continue
+		}
+
+		bulletContent := parseBulletLine(line)
+		if bulletContent != "" {
+			out = append(out, "• "+formatInlineText(bulletContent))
+			continue
+		}
+
+		if numberedItemExpr.MatchString(line) {
+			prefix := strings.TrimSpace(numberedItemExpr.FindString(line))
+			item := strings.TrimSpace(numberedItemExpr.ReplaceAllString(line, ""))
+			if item != "" {
+				out = append(out, formatInlineText(prefix+" "+item))
+				continue
+			}
+		}
+
+		out = append(out, formatInlineText(line))
+	}
+
+	for len(out) > 0 && out[0] == "" {
+		out = out[1:]
+	}
+	for len(out) > 0 && out[len(out)-1] == "" {
+		out = out[:len(out)-1]
+	}
+
+	return strings.Join(out, "\n")
+}
+
+func parseBulletLine(line string) string {
+	if strings.HasPrefix(line, "- ") {
+		return strings.TrimSpace(strings.TrimPrefix(line, "- "))
+	}
+	if strings.HasPrefix(line, "* ") {
+		return strings.TrimSpace(strings.TrimPrefix(line, "* "))
+	}
+	if strings.HasPrefix(line, "• ") {
+		return strings.TrimSpace(strings.TrimPrefix(line, "• "))
+	}
+	return ""
+}
+
+func formatInlineText(text string) string {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return ""
+	}
+
+	text = headerPrefixExpr.ReplaceAllString(text, "")
+	text = boldPattern.ReplaceAllString(text, "$1")
+	text = strings.ReplaceAll(text, "**", "")
+	text = strings.ReplaceAll(text, "*", "")
+	text = strings.ReplaceAll(text, "`", "")
+	return text
 }
