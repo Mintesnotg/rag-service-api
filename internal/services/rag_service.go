@@ -206,7 +206,6 @@ func (s *ragService) Query(ctx context.Context, input QueryInput) (*QueryRespons
 		log.Printf("rag: failed to generate answer question=%q contexts=%d err=%v", question, len(contexts), err)
 		return nil, err
 	}
-	// answer = formatLLMAnswer(answer)
 
 	sources := make([]string, 0, len(sourcesMap))
 	for id := range sourcesMap {
@@ -223,77 +222,4 @@ func (s *ragService) updateProcessingStatus(documentID string, status enums.Proc
 	if err := s.documentRepo.UpdateProcessingStatus(documentID, status); err != nil {
 		log.Printf("rag: failed to update processing status document_id=%s status=%s err=%v", documentID, status, err)
 	}
-}
-
-func formatLLMAnswer(answer string) string {
-	answer = strings.TrimSpace(strings.ReplaceAll(answer, "\r\n", "\n"))
-	if answer == "" {
-		return ""
-	}
-
-	lines := strings.Split(answer, "\n")
-	out := make([]string, 0, len(lines))
-
-	for _, rawLine := range lines {
-		line := strings.TrimSpace(rawLine)
-		if line == "" {
-			if len(out) > 0 && out[len(out)-1] != "" {
-				out = append(out, "")
-			}
-			continue
-		}
-
-		bulletContent := parseBulletLine(line)
-		if bulletContent != "" {
-			out = append(out, "• "+formatInlineText(bulletContent))
-			continue
-		}
-
-		if numberedItemExpr.MatchString(line) {
-			prefix := strings.TrimSpace(numberedItemExpr.FindString(line))
-			item := strings.TrimSpace(numberedItemExpr.ReplaceAllString(line, ""))
-			if item != "" {
-				out = append(out, formatInlineText(prefix+" "+item))
-				continue
-			}
-		}
-
-		out = append(out, formatInlineText(line))
-	}
-
-	for len(out) > 0 && out[0] == "" {
-		out = out[1:]
-	}
-	for len(out) > 0 && out[len(out)-1] == "" {
-		out = out[:len(out)-1]
-	}
-
-	return strings.Join(out, "\n")
-}
-
-func parseBulletLine(line string) string {
-	if strings.HasPrefix(line, "- ") {
-		return strings.TrimSpace(strings.TrimPrefix(line, "- "))
-	}
-	if strings.HasPrefix(line, "* ") {
-		return strings.TrimSpace(strings.TrimPrefix(line, "* "))
-	}
-	if strings.HasPrefix(line, "• ") {
-		return strings.TrimSpace(strings.TrimPrefix(line, "• "))
-	}
-	return ""
-}
-
-func formatInlineText(text string) string {
-	text = strings.TrimSpace(text)
-	if text == "" {
-		return ""
-	}
-
-	text = headerPrefixExpr.ReplaceAllString(text, "")
-	text = boldPattern.ReplaceAllString(text, "$1")
-	text = strings.ReplaceAll(text, "**", "")
-	text = strings.ReplaceAll(text, "*", "")
-	text = strings.ReplaceAll(text, "`", "")
-	return text
 }
