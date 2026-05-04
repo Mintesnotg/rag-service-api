@@ -35,6 +35,9 @@ func Seed(db *gorm.DB) error {
 	if err := SeedRolePermissions(db); err != nil {
 		return err
 	}
+	if err := SeedDefaultUserRolePermissions(db); err != nil {
+		return err
+	}
 
 	log.Println("Database seeding completed successfully")
 	return nil
@@ -66,6 +69,13 @@ func seedPermissions(db *gorm.DB) error {
 		"update_doc_category",
 		"delete_doc_category",
 		"document.manage",
+		"create_users",
+		"update_users",
+		"delete_users",
+		"manage_user_roles",
+		"view_chatbot",
+		"query_rag",
+		"download_reference_docs",
 	}
 
 	for _, name := range names {
@@ -205,5 +215,28 @@ func SeedRolePermissions(db *gorm.DB) error {
 	}
 
 	log.Println("Role permissions seeded")
+	return nil
+}
+
+func SeedDefaultUserRolePermissions(db *gorm.DB) error {
+	var userRole usermodels.Role
+	if err := db.Where("name = ?", "user").Preload("Permissions").First(&userRole).Error; err != nil {
+		return err
+	}
+
+	var permissions []usermodels.Permission
+	if err := db.Where("name IN ?", []string{
+		"view_chatbot",
+		"query_rag",
+		"download_reference_docs",
+	}).Find(&permissions).Error; err != nil {
+		return err
+	}
+
+	if err := db.Model(&userRole).Association("Permissions").Replace(permissions); err != nil {
+		return err
+	}
+
+	log.Println("Default user role permissions seeded")
 	return nil
 }

@@ -12,6 +12,7 @@ import (
 	"io"
 	"log"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -36,13 +37,19 @@ type QueryResponse struct {
 	Contexts []string `json:"contexts"`
 }
 
-const responseFormatGuide = `Response formatting requirements:
-1. Use clear section headings and subheadings where useful.
-2. Use bullet points for unordered details and numbered lists for steps.
-3. Keep wording professional, concise, and user-friendly.
-4. Avoid raw markdown symbols in final text when possible.
-5. Keep a logical flow: introduction, key details, short summary.
-6. Avoid redundancy and keep spacing clean.`
+const responseFormatGuide = `Return a clean, user-friendly answer.
+Rules:
+1. Never output markdown symbols such as *, **, #, or backticks.
+2. Write in short, clear paragraphs.
+3. For lists, use either numbered lines (1. 2. 3.) or bullet lines (- item).
+4. Make headings and subheadings bold using **text**, and keep them short and clear.
+5. Keep professional tone and avoid unnecessary clutter.`
+
+var (
+	boldPattern      = regexp.MustCompile(`\*\*(.+?)\*\*`)
+	headerPrefixExpr = regexp.MustCompile(`^#{1,6}\s*`)
+	numberedItemExpr = regexp.MustCompile(`^\d+\.\s+`)
+)
 
 type ragService struct {
 	documentRepo repositories.DocumentRepository

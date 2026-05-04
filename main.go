@@ -61,6 +61,7 @@ func main() {
 	}
 
 	authService := services.NewAuthService(userRepo)
+	userService := services.NewUserService(userRepo)
 	roleService := services.NewRoleService(roleRepo)
 	permissionService := services.NewPermissionService(permissionRepo)
 	docCategoryService := services.NewDocCategoryService(docCategoryRepo)
@@ -79,21 +80,23 @@ func main() {
 	documentService := services.NewDocumentService(documentRepo, docCategoryRepo, minioStorage, ragService)
 
 	authHandler := handlers.NewAuthHandler(authService)
+	userHandler := handlers.NewUserHandler(userService)
 	roleHandler := handlers.NewRoleHandler(roleService)
 	permissionHandler := handlers.NewPermissionHandler(permissionService)
 	docCategoryHandler := handlers.NewDocCategoryHandler(docCategoryService)
 	documentHandler := handlers.NewDocumentHandler(documentService)
-	ragHandler := handlers.NewRAGHandler(ragService)
+	ragHandler := handlers.NewRAGHandler(ragService, documentService)
 
 	permissionHydrator := middleware.PermissionsMiddleware(permissionService)
 	headerPermissionCheck := middleware.RequireHeaderPermission()
 
 	routes.RegisterAuthRoutes(router, authHandler)
+	routes.RegisterUserRoutes(router, userHandler, permissionHydrator, headerPermissionCheck)
 	routes.RegisterPermissionRoutes(router, permissionHandler, permissionHydrator, headerPermissionCheck)
 	routes.RegisterRoleRoutes(router, roleHandler, permissionHydrator, headerPermissionCheck)
 	routes.RegisterDocCategoryRoutes(router, docCategoryHandler, permissionHydrator)
 	routes.RegisterDocumentRoutes(router, documentHandler, permissionHydrator, headerPermissionCheck)
-	routes.RegisterRAGRoutes(router, ragHandler)
+	routes.RegisterRAGRoutes(router, ragHandler, permissionHydrator, headerPermissionCheck)
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
