@@ -1,0 +1,60 @@
+name: Feature request
+description: Propose an API or platform enhancement
+labels:
+  - enhancement
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      placeholder: Add metadata filters to RAG similarity search
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Authentication and authorization
+        - Document pipeline
+        - RAG retrieval and generation
+        - API contracts
+        - Storage and infrastructure
+        - Developer experience
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+    validations:
+      required: true
+  - type: textarea
+    id: technical
+    attributes:
+      label: Technical implementation hints
+      description: Mention schema changes, middleware impacts, migration plans
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I checked for duplicate issues.
+          required: true
+        - label: I can help implement this feature.
+          required: false

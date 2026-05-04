@@ -175,3 +175,9 @@ http://localhost:8080/swagger/index.html
 
 - RAG service can be disabled automatically if embedder/LLM initialization fails.
 - Admin flows remain protected; only `POST /api/rag/query` is intentionally public.
+
+## Open Source Collaboration
+
+- Contribution guide: `CONTRIBUTING.md`
+- Backend platform extensibility blueprint: `PLATFORM.md`
+- Maintainer-ready issue backlog: `.github/ISSUE_BACKLOG.md`
